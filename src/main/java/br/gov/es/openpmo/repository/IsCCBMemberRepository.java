@@ -3,20 +3,19 @@ package br.gov.es.openpmo.repository;
 import br.gov.es.openpmo.model.actors.Person;
 import br.gov.es.openpmo.model.relations.IsCCBMemberFor;
 import br.gov.es.openpmo.model.workpacks.Workpack;
+import java.util.List;
+import java.util.Set;
 import org.springframework.data.neo4j.annotation.Query;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Set;
-
 @Repository
 public interface IsCCBMemberRepository extends Neo4jRepository<IsCCBMemberFor, Long> {
 
-  @Query("MATCH (p:Person)-[c:IS_CCB_MEMBER_FOR]->(w:Workpack) " +
-         "WHERE id(w)=$workpackId " +
-         "RETURN p,c,w")
+  @Query("MATCH (p:Person)-[c:IS_CCB_MEMBER_FOR]->(w:Workpack)<-[:IS_IN*0..]-(n:Workpack)\n" +
+            "WHERE $workpackId IN [id(w), id(n)]\n" +
+            "RETURN p,c,w")
   List<IsCCBMemberFor> findAllByWorkpackId(Long workpackId);
 
   @Query("MATCH (p:Person)-[c:IS_CCB_MEMBER_FOR{active:true}]->(w:Workpack)-[:IS_BASELINED_BY]->(:Baseline) " +
@@ -68,7 +67,8 @@ public interface IsCCBMemberRepository extends Neo4jRepository<IsCCBMemberFor, L
     Long idWorkpack
   );
 
-  @Query("MATCH (pl:Plan)-[a:IS_ADOPTED_BY]->(o:Office)<-[i:IS_IN_CONTACT_BOOK_OF]-(p:Person)-[c:IS_CCB_MEMBER_FOR]->" +
+  @Query("MATCH (pl:Plan)-[a:IS_ADOPTED_BY]->(o:Office)" +
+         "<-[i:IS_IN_CONTACT_BOOK_OF]-(p:Person)-[c:IS_CCB_MEMBER_FOR]->" +
          "(w:Workpack) " +
          "WHERE id(w)=$idWorkpack AND id(p)=$idPerson AND id(pl)=$idPlan " +
          "OPTIONAL MATCH (p)-[aut:IS_AUTHENTICATED_BY]-(autS:AuthService) " +

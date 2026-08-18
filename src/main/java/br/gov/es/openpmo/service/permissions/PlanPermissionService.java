@@ -30,12 +30,12 @@ import br.gov.es.openpmo.service.baselines.EvaluateBaselineService;
 import br.gov.es.openpmo.service.journals.JournalCreator;
 import br.gov.es.openpmo.service.office.OfficeService;
 import br.gov.es.openpmo.service.office.plan.PlanService;
+import br.gov.es.openpmo.service.publicidentity.PublicIdentityValidationService;
 import br.gov.es.openpmo.utils.ApplicationMessage;
+import static br.gov.es.openpmo.utils.ApplicationMessage.CUSTOM_FILTER_NOT_FOUND;
+import static br.gov.es.openpmo.utils.ApplicationMessage.OFFICE_NOT_FOUND;
+import static br.gov.es.openpmo.utils.ApplicationMessage.PLAN_PERMISSION_NOT_FOUND;
 import br.gov.es.openpmo.utils.TextSimilarityScore;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,10 +44,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static br.gov.es.openpmo.utils.ApplicationMessage.CUSTOM_FILTER_NOT_FOUND;
-import static br.gov.es.openpmo.utils.ApplicationMessage.OFFICE_NOT_FOUND;
-import static br.gov.es.openpmo.utils.ApplicationMessage.PLAN_PERMISSION_NOT_FOUND;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class PlanPermissionService {
@@ -84,6 +83,8 @@ public class PlanPermissionService {
 
   private final EvaluateBaselineService evaluateBaselineService;
 
+  private final PublicIdentityValidationService publicIdentityValidationService;
+
   @Autowired
   public PlanPermissionService(
     final PlanPermissionRepository repository,
@@ -101,7 +102,8 @@ public class PlanPermissionService {
     final FindAllPlanPermissionUsingCustomFilter findAllPlanPermission,
     final FindAllPlanPermissionByIdPersonUsingCustomFilter findAllPlanPermissionByIdPerson,
     final IsCCBMemberRepository isCCBMemberRepository,
-    final EvaluateBaselineService evaluateBaselineService
+    final EvaluateBaselineService evaluateBaselineService,
+    final PublicIdentityValidationService publicIdentityValidationService
   ) {
     this.repository = repository;
     this.customFilterRepository = customFilterRepository;
@@ -119,6 +121,7 @@ public class PlanPermissionService {
     this.findAllPlanPermissionByIdPerson = findAllPlanPermissionByIdPerson;
     this.isCCBMemberRepository = isCCBMemberRepository;
     this.evaluateBaselineService = evaluateBaselineService;
+    this.publicIdentityValidationService = publicIdentityValidationService;
   }
 
   public void delete(
@@ -206,13 +209,15 @@ public class PlanPermissionService {
     });
 
     plansPermissionDto.removeIf(dto -> !StringUtils.isBlank(term)
-      && this.textSimilarityScore.execute(
-      dto.getPerson().getName() + dto.getPerson().getFullName(),
-      term
-    ) <= this.appProperties.getSearchCutOffScore());
-
-
-    return plansPermissionDto;
+      && (
+            this.textSimilarityScore.execute(dto.getPerson().getName(), term) <= this.appProperties.getSearchCutOffScore()
+            || this.textSimilarityScore.execute(dto.getPerson().getFullName(), term) <= this.appProperties.getSearchCutOffScore()
+        )
+    );
+    
+    return plansPermissionDto.stream().sorted(
+            (dto1, dto2) -> (int) Math.round(this.textSimilarityScore.execute(dto1.getPerson().getName(), term) - this.textSimilarityScore.execute(dto2.getPerson().getFullName(), term))
+    ).collect(Collectors.toList());
   }
 
   private List<CanAccessPlan> listPlansPermissions(
@@ -403,6 +408,10 @@ public class PlanPermissionService {
     final PlanPermissionParamDto request,
     final String authorization
   ) {
+    this.publicIdentityValidationService.validate(
+      request.getIdentityValidation(),
+      request.getKey()
+    );
     final Long idPlan = Optional.of(request)
       .map(PlanPermissionParamDto::getIdPlan)
       .orElse(null);

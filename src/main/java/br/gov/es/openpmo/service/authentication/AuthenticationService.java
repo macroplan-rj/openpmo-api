@@ -77,20 +77,20 @@ public class AuthenticationService {
 
 
     if (person.isPresent()) {
-      final Person user = person.get();
+        final Person user = person.get();
 
-    IsAuthenticatedBy authRelationship = user.getAuthentications().stream().findFirst().orElse(null);
-    if (authRelationship != null) {
-      authRelationship.setEmail(email);
-      if (sub != null) {
-        authRelationship.setKey(key);
-      }
-      this.personService.save(user);
-    }
+        IsAuthenticatedBy authRelationship = user.getAuthentications().stream().findFirst().orElse(null);
+        if (authRelationship != null) {
+            this.isAuthenticatedByService.updateCredentials(
+              authRelationship.getId(),
+              email,
+              key
+            );
+        }
 
-      final String authenticationToken = this.tokenService.generateToken(user, key, email, rid, TokenType.AUTHENTICATION);
-      final String refreshToken = this.tokenService.generateToken(user, key, email, rid, TokenType.REFRESH);
-      return new AcessoDto(authenticationToken, refreshToken);
+        final String authenticationToken = this.tokenService.generateToken(user, key, email, rid, TokenType.AUTHENTICATION);
+        final String refreshToken = this.tokenService.generateToken(user, key, email, rid, TokenType.REFRESH);
+        return new AcessoDto(authenticationToken, refreshToken);
     }
     if (this.administrators.contains(email)) {
       final Person user = this.createPerson();
