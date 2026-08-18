@@ -28,6 +28,7 @@ repositories {
         )
         filter {
             includeGroup 'com.github.sep-es-br'
+            includeGroup 'com.github.macroplan-rj'
         }
     }
     maven {
