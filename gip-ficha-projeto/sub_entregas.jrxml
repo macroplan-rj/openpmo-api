@@ -15,15 +15,20 @@ OPTIONAL MATCH (pe:Person)-[:IS_STAKEHOLDER_IN]->(d)
 WITH w, d, pairs, collect(DISTINCT pe.name) AS stk
 OPTIONAL MATCH (sc:Schedule)-[:FEATURES]->(d)
 OPTIONAL MATCH (st:Step)-[:COMPOSES]->(sc)
+OPTIONAL MATCH (st)-[cn:CONSUMES]->(:CostAccount)
 WITH w, d, pairs, stk, min(sc.start) AS ini, max(sc.end) AS fim,
-     sum(toFloat(coalesce(st.plannedWork,0))) AS planW,
-     sum(toFloat(coalesce(st.actualWork,0)))  AS realW
+     collect(DISTINCT st) AS steps, collect(DISTINCT cn) AS consumos
+WITH w, d, pairs, stk, ini, fim, size(consumos) AS qtdConsumos,
+     reduce(a=0.0, x IN steps    | a + toFloat(coalesce(x.plannedWork,0))) AS planW,
+     reduce(a=0.0, x IN steps    | a + toFloat(coalesce(x.actualWork,0)))  AS realW,
+     reduce(a=0.0, c IN consumos | a + toFloat(coalesce(c.actualCost,0)))  AS custoReal
 RETURN
   d.name AS entrega,
   reduce(s='', n IN [x IN stk WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s + ', ' + n END) AS partesInteressadas,
   head([x IN pairs WHERE x[0]='Tipo'                    AND x[1] IS NOT NULL | x[1]]) AS tipo,
   head([x IN pairs WHERE x[0]='Situação'                AND x[1] IS NOT NULL | x[1]]) AS situacao,
   toFloat(coalesce(head([x IN pairs WHERE x[0]='Custo Operacional Anual' AND x[1] IS NOT NULL | x[1]]),'0')) AS custoOperacional,
+  CASE WHEN qtdConsumos=0 THEN null ELSE round(custoReal,2) END AS custoRealizado,
   toString(ini) AS inicioPrevisto,
   toString(fim) AS terminoPrevisto,
   CASE WHEN planW > 0 THEN round(100.0*realW/planW, 2) ELSE null END AS execEstimada
@@ -34,31 +39,34 @@ ORDER BY entrega]]>
 	<field name="tipo" class="java.lang.String"/>
 	<field name="situacao" class="java.lang.String"/>
 	<field name="custoOperacional" class="java.lang.Double"/>
+	<field name="custoRealizado" class="java.lang.Double"/>
 	<field name="inicioPrevisto" class="java.lang.String"/>
 	<field name="terminoPrevisto" class="java.lang.String"/>
 	<field name="execEstimada" class="java.lang.Double"/>
 	<columnHeader>
 		<band height="18">
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="0"   y="0" width="120" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Entrega]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="120" y="0" width="85"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Partes Interessadas]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="205" y="0" width="55"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Tipo]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="260" y="0" width="85"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Situação]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="345" y="0" width="70"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Custo Oper. Anual]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="415" y="0" width="50"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Início prev.]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="465" y="0" width="50"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Térm. prev.]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="515" y="0" width="40"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[% Exec.]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="0"   y="0" width="105" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Entrega]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="105" y="0" width="70"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Partes Interessadas]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="175" y="0" width="48"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Tipo]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="223" y="0" width="70"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Situação]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="293" y="0" width="60"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Custo Oper. Anual]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="353" y="0" width="60" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Custo Realizado]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="413" y="0" width="47"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Início prev.]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="460" y="0" width="47"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Térm. prev.]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="507" y="0" width="48"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[% Exec.]]></text></staticText>
 		</band>
 	</columnHeader>
 	<detail>
 		<band height="16">
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="0"   y="0" width="120" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{entrega}]]></textFieldExpression></textField>
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="120" y="0" width="85"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{partesInteressadas}]]></textFieldExpression></textField>
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="205" y="0" width="55"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{tipo}]]></textFieldExpression></textField>
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="260" y="0" width="85"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{situacao}]]></textFieldExpression></textField>
-			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="345" y="0" width="70"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{custoOperacional}]]></textFieldExpression></textField>
-			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="415" y="0" width="50"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{inicioPrevisto}]]></textFieldExpression></textField>
-			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="465" y="0" width="50"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{terminoPrevisto}]]></textFieldExpression></textField>
-			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="515" y="0" width="40"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{execEstimada}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="0"   y="0" width="105" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{entrega}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="105" y="0" width="70"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{partesInteressadas}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="175" y="0" width="48"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{tipo}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="223" y="0" width="70"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{situacao}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="293" y="0" width="60"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{custoOperacional}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="353" y="0" width="60" height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{custoRealizado}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="413" y="0" width="47"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{inicioPrevisto}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="460" y="0" width="47"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{terminoPrevisto}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="507" y="0" width="48"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{execEstimada}]]></textFieldExpression></textField>
 		</band>
 	</detail>
 	<noData>

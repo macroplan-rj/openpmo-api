@@ -9,46 +9,83 @@
 	<queryString>
 		<![CDATA[MATCH (w:Workpack:Project)-[:BELONGS_TO]->(pl:Plan)
 WHERE id(w) = $P!{idProjeto}
+
+// Nome de propriedade comparado NORMALIZADO e por lista de aliases — mesmo criterio
+// do sub_cabecalho. Ha nomes que so diferem por espaco no fim ou por U+200B.
 OPTIONAL MATCH (w)<-[:FEATURES]-(:Property)-[:GROUPS*0..2]->(p:Property)-[:IS_DRIVEN_BY]->(pm:PropertyModel)
-WITH w, collect([pm.name, coalesce(p.value, toString(p.date), toString(p.selectedValue))]) AS pairs
+WITH w, collect([toLower(trim(replace(pm.name, '\u200B', ''))),
+                 coalesce(p.value, toString(p.date), toString(p.selectedValue))]) AS pairs
+
 OPTIONAL MATCH (b:Baseline)-[:IS_BASELINED_BY|IS_PROPOSED_BY]-(w)
-WITH w, pairs, collect(DISTINCT b.name) AS bl
+WITH w, pairs,
+     collect(DISTINCT CASE WHEN coalesce(b.active,false) THEN b.name END) AS blAtiva,
+     collect(DISTINCT b.name) AS blTodas
+WITH w, pairs, [x IN blAtiva WHERE x IS NOT NULL] + [x IN blTodas WHERE x IS NOT NULL] AS bl
+
+// Execucao fisica e financeira saem da mesma travessia. Colecionar DISTINCT antes de
+// somar evita que o produto cartesiano das travessias conte o mesmo Step duas vezes.
 OPTIONAL MATCH (d:Workpack:Deliverable)-[:IS_IN*1..3]->(w)
 OPTIONAL MATCH (sc:Schedule)-[:FEATURES]->(d)
 OPTIONAL MATCH (st:Step)-[:COMPOSES]->(sc)
-WITH w, pairs, bl, collect(DISTINCT d) AS entregas,
-     sum(toFloat(coalesce(st.plannedWork,0))) AS planW,
-     sum(toFloat(coalesce(st.actualWork,0)))  AS realW
+OPTIONAL MATCH (st)-[cn:CONSUMES]->(:CostAccount)
+WITH w, pairs, bl,
+     collect(DISTINCT d)  AS entregas,
+     collect(DISTINCT st) AS steps,
+     collect(DISTINCT cn) AS consumos
+WITH w, pairs, bl, entregas, size(consumos) AS qtdConsumos,
+     reduce(a=0.0, s IN steps    | a + toFloat(coalesce(s.plannedWork,0))) AS planW,
+     reduce(a=0.0, s IN steps    | a + toFloat(coalesce(s.actualWork,0)))  AS realW,
+     reduce(a=0.0, c IN consumos | a + toFloat(coalesce(c.plannedCost,0))) AS planC,
+     reduce(a=0.0, c IN consumos | a + toFloat(coalesce(c.actualCost,0)))  AS realC
+
 // Risco liga-se por IS_FORSEEN_ON, nao por IS_REGISTERED_IN/RELATED_TO/FOR —
-// nenhum dos tres tipos existe no grafo, e a consulta antiga devolvia sempre vazio.
-// Alcanca tambem os riscos das entregas do projeto, nao so os do proprio projeto.
+// nenhum dos tres tipos existe no grafo. Alcanca tambem os riscos das entregas.
 OPTIONAL MATCH (r:Risk)-[:IS_FORSEEN_ON]->(rw:Workpack)
 WHERE rw = w OR (rw)-[:IS_IN*1..3]->(w)
-WITH w, pairs, bl, entregas, planW, realW, collect(DISTINCT r.name) AS riscos
+WITH w, pairs, bl, entregas, qtdConsumos, planW, realW, planC, realC, collect(DISTINCT r.name) AS riscos
+
 UNWIND (CASE WHEN size(entregas)=0 THEN [null] ELSE entregas END) AS ent
 OPTIONAL MATCH (ent)<-[:FEATURES]-(:Property)-[:GROUPS*0..2]->(ep:Property)-[:IS_DRIVEN_BY]->(epm:PropertyModel)
-WHERE epm.name = 'Situação'
-WITH w, pairs, bl, entregas, planW, realW, riscos, collect(DISTINCT ep.value) AS sitEntregas
-WITH w, bl, entregas, planW, realW, riscos, sitEntregas,
-  [k IN ['Unidade gestora','Situação','Valor de investimento (CAPEX)','Valor de custeio (OPEX)']
-   | [k, coalesce(head([x IN pairs WHERE x[0]=k AND x[1] IS NOT NULL | x[1]]), '')]] AS f
-WITH w, bl, entregas, planW, realW, riscos, sitEntregas, f,
-  toFloat(coalesce(head([x IN f WHERE x[0]='Valor de investimento (CAPEX)' AND x[1]<>'' | x[1]]),'0'))
-+ toFloat(coalesce(head([x IN f WHERE x[0]='Valor de custeio (OPEX)'       AND x[1]<>'' | x[1]]),'0')) AS custoPrevisto
+WHERE toLower(trim(replace(epm.name, '\u200B', ''))) = 'situação'
+WITH w, pairs, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos,
+     collect(DISTINCT ep.value) AS sitEntregas
+
+WITH w, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos, sitEntregas,
+  [ap IN [
+    {k:'unidade',    a:['unidade gestora']},
+    {k:'situacao',   a:['situação','situacao']},
+    {k:'capex',      a:['valor de investimento (capex)','valor de investimento','valor financeiro do investimento']},
+    {k:'opex',       a:['valor de custeio (opex)','valor do custeio da operação']},
+    {k:'valorunico', a:['valor estimado do projeto']}
+   ] | [ap.k, coalesce(head([x IN pairs WHERE x[0] IN ap.a AND x[1] IS NOT NULL AND x[1] <> '' | x[1]]), '')]] AS f
+WITH w, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos, sitEntregas, f,
+  head([x IN f WHERE x[0]='valorunico' | x[1]]) AS vUnico,
+  toFloat(coalesce(head([x IN f WHERE x[0]='capex' AND x[1]<>'' | x[1]]),'0'))
++ toFloat(coalesce(head([x IN f WHERE x[0]='opex'  AND x[1]<>'' | x[1]]),'0')) AS vSoma
+WITH w, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos, sitEntregas, f,
+  CASE WHEN vUnico <> '' THEN toFloat(vUnico) ELSE vSoma END AS custoPrevisto
 UNWIND [
   ['Nome do Projeto',                   coalesce(w.name,''),                                    null],
   ['Data de Referência',                toString(date()),                                       null],
   ['Linha de base',                     coalesce(head(bl),''),                                  null],
-  ['Unidade Gestora',                   head([x IN f WHERE x[0]='Unidade gestora' | x[1]]),      null],
-  ['Situação',                          head([x IN f WHERE x[0]='Situação' | x[1]]),             null],
+  ['Unidade Gestora',                   head([x IN f WHERE x[0]='unidade' | x[1]]),             null],
+  ['Situação',                          head([x IN f WHERE x[0]='situacao' | x[1]]),            null],
   ['Custo total previsto',              '',                                            custoPrevisto],
-  ['Custo realizado',                   '— sem lançamento de custo realizado no ambiente',       null],
+  ['Custo realizado',
+     CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo realizado neste projeto' ELSE '' END,
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END],
   ['Execução física planejada',         '',       CASE WHEN planW>0 THEN round(planW,2) ELSE null END],
   ['Execução física realizada',         '',       CASE WHEN planW>0 THEN round(realW,2) ELSE null END],
   ['% cumprimento físico',              '',       CASE WHEN planW>0 THEN round(100.0*realW/planW,2) ELSE null END],
-  ['Execução financeira planejada (%)', '— depende de Conta de Custo vinculada às entregas',     null],
-  ['Execução financeira realizada (%)', '— depende de Conta de Custo vinculada às entregas',     null],
-  ['% cumprimento financeiro',          '— depende de Conta de Custo vinculada às entregas',     null],
+  ['Execução financeira planejada (%)',
+     CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo neste projeto' ELSE '' END,
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(planC,2) END],
+  ['Execução financeira realizada (%)',
+     CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo neste projeto' ELSE '' END,
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END],
+  ['% cumprimento financeiro',
+     CASE WHEN planC>0 THEN '' ELSE '— sem custo planejado neste projeto' END,
+     CASE WHEN planC>0 THEN round(100.0*realC/planC,2) ELSE null END],
   ['N° de Entregas cadastradas',        toString(size(entregas)),                               null],
   ['Status das Entregas',               reduce(s='', n IN [x IN sitEntregas WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null],
   ['Riscos',                            reduce(s='', n IN [x IN riscos      WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null]
