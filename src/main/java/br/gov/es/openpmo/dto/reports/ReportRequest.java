@@ -2,7 +2,6 @@ package br.gov.es.openpmo.dto.reports;
 
 import br.gov.es.openpmo.model.reports.ReportFormat;
 
-import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -16,7 +15,9 @@ public class ReportRequest {
 
   private final List<ReportParamsRequest> params;
 
-  @NotEmpty
+  // Sem @NotEmpty de proposito: escopo vazio e escopo que nao resolve para nenhum
+  // workpack sao a mesma falha para quem usa a tela, e devem devolver a mesma
+  // mensagem de negocio. Quem responde por isso e o ReportScopeValidator.
   private final List<@NotNull Long> scope;
 
   @NotNull

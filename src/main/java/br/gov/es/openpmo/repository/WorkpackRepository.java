@@ -572,6 +572,12 @@ public interface WorkpackRepository extends Neo4jRepository<Workpack, Long>, Cus
   List<Long> idsWorkpacksChildren(
       List<Long> idsWorkpacks);
 
+  @Query("MATCH (w:Workpack) " +
+      "WHERE id(w) IN $ids AND coalesce(w.deleted,false) = false " +
+      "RETURN id(w)")
+  List<Long> idsExistentesNaoDeletados(
+      List<Long> ids);
+
   @Query("MATCH (w:Workpack), (p:Workpack) " +
       "WHERE id(w)=$childId AND id(p)=$parentId " +
       "CREATE (w)-[:IS_IN]->(p)")
