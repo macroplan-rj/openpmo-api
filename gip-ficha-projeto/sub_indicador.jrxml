@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="sub_indicador" pageWidth="555" pageHeight="842" columnWidth="555"
+              leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0"
+              whenNoDataType="AllSectionsNoDetail">
+	<parameter name="idProjeto" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[MATCH (i:Indicator)-[:RELATED_TO]->(alvo:Workpack)
+MATCH (alvo)-[:IS_IN*0..3]->(w:Workpack:Project)
+WHERE id(w) = $P!{idProjeto}
+OPTIONAL MATCH (g:PeriodGoal)-[:IS_DEFINED_FOR]->(i)
+WITH i,
+     sum(toFloat(coalesce(g.expectedValue, 0))) AS metaPrev,
+     sum(toFloat(coalesce(g.achievedValue, 0))) AS metaReal,
+     max(g.lastUpdate) AS atualizacao
+RETURN
+  i.name    AS indicador,
+  i.source  AS fonte,
+  i.measure AS unidadeMedida,
+  metaPrev  AS metaPrevista,
+  metaReal  AS metaRealizada,
+  CASE WHEN metaPrev > 0 THEN round(100.0*metaReal/metaPrev, 2) ELSE null END AS pctAlcance,
+  toString(atualizacao) AS dataAtualizacao
+ORDER BY indicador]]>
+	</queryString>
+	<field name="indicador" class="java.lang.String"/>
+	<field name="fonte" class="java.lang.String"/>
+	<field name="unidadeMedida" class="java.lang.String"/>
+	<field name="metaPrevista" class="java.lang.Double"/>
+	<field name="metaRealizada" class="java.lang.Double"/>
+	<field name="pctAlcance" class="java.lang.Double"/>
+	<field name="dataAtualizacao" class="java.lang.String"/>
+	<columnHeader>
+		<band height="18">
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="0"   y="0" width="175" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Indicador]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="175" y="0" width="70"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Fonte]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="245" y="0" width="60"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Un. Medida]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="305" y="0" width="65"  height="18"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Meta Prevista]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="370" y="0" width="65"  height="18"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Meta Realizada]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="435" y="0" width="50"  height="18"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[% Alcance]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="485" y="0" width="70"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Atualização]]></text></staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="16">
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="0"   y="0" width="175" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{indicador}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="175" y="0" width="70"  height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{fonte}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="245" y="0" width="60"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{unidadeMedida}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="305" y="0" width="65"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{metaPrevista}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="370" y="0" width="65"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{metaRealizada}]]></textFieldExpression></textField>
+			<textField pattern="#,##0.00" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="435" y="0" width="50"  height="16"/><box rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Right" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{pctAlcance}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="485" y="0" width="70"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{dataAtualizacao}]]></textFieldExpression></textField>
+		</band>
+	</detail>
+	<noData>
+		<band height="16">
+			<staticText><reportElement x="0" y="0" width="555" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7" isItalic="true"/></textElement><text><![CDATA[Nenhum indicador vinculado a este projeto.]]></text></staticText>
+		</band>
+	</noData>
+</jasperReport>

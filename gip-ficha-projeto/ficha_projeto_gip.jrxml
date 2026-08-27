@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="ficha_projeto_gip" pageWidth="595" pageHeight="842" columnWidth="555"
+              leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20"
+              whenNoDataType="AllSectionsNoDetail">
+
+	<!-- Injetado por GenerateReportComponent: ids de workpack que o usuario pode acessar -->
+	<parameter name="scope" class="java.lang.String"/>
+	<!-- Injetados por subReportsAsParams: nome do arquivo .jrxml sem a extensao -->
+	<parameter name="sub_cabecalho" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="sub_painel"    class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="sub_indicador" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="sub_entregas"  class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="sub_marcos"    class="net.sf.jasperreports.engine.JasperReport"/>
+
+	<queryString>
+		<![CDATA[MATCH (w:Workpack:Project)-[:BELONGS_TO]->(pl:Plan)
+WHERE id(w) IN [$P!{scope}]
+RETURN toString(id(w)) AS id, coalesce(w.name,'') AS nomeProjeto, coalesce(pl.name,'') AS plano
+ORDER BY nomeProjeto, id]]>
+	</queryString>
+
+	<field name="id"          class="java.lang.String"/>
+	<field name="nomeProjeto" class="java.lang.String"/>
+	<field name="plano"       class="java.lang.String"/>
+
+	<title>
+		<band height="40">
+			<staticText>
+				<reportElement x="0" y="0" width="400" height="18"/>
+				<textElement><font size="14" isBold="true"/></textElement>
+				<text><![CDATA[Ficha de Projeto]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="0" y="20" width="555" height="12"/>
+				<textElement><font size="7"/></textElement>
+				<textFieldExpression><![CDATA["Gestão de Investimentos Prioritários (GIP)  •  emitido em " + new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date())]]></textFieldExpression>
+			</textField>
+			<line><reportElement x="0" y="36" width="555" height="1"/><graphicElement><pen lineWidth="0.5"/></graphicElement></line>
+		</band>
+	</title>
+
+	<detail>
+		<band height="230" splitType="Stretch">
+			<break type="Page">
+				<reportElement x="0" y="0" width="555" height="1">
+					<printWhenExpression><![CDATA[$V{REPORT_COUNT} > 1]]></printWhenExpression>
+				</reportElement>
+			</break>
+
+			<textField>
+				<reportElement x="0" y="2" width="555" height="14"/>
+				<textElement verticalAlignment="Middle"><font size="10" isBold="true"/></textElement>
+				<textFieldExpression><![CDATA[$F{nomeProjeto} + "  ·  " + $F{plano}]]></textFieldExpression>
+			</textField>
+
+			<!-- 1. IDENTIFICACAO -->
+			<staticText><reportElement positionType="Float" forecolor="#FFFFFF" mode="Opaque" backcolor="#1F3864" x="0" y="20" width="555" height="14"/><box leftPadding="4"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[1. IDENTIFICAÇÃO DO PROJETO]]></text></staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="36" width="555" height="18"/>
+				<subreportParameter name="idProjeto"><subreportParameterExpression><![CDATA[$F{id}]]></subreportParameterExpression></subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{sub_cabecalho}]]></subreportExpression>
+			</subreport>
+
+			<!-- 2. PAINEL-RESUMO -->
+			<staticText><reportElement positionType="Float" forecolor="#FFFFFF" mode="Opaque" backcolor="#1F3864" x="0" y="60" width="555" height="14"/><box leftPadding="4"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[2. PAINEL-RESUMO]]></text></staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="76" width="555" height="18"/>
+				<subreportParameter name="idProjeto"><subreportParameterExpression><![CDATA[$F{id}]]></subreportParameterExpression></subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{sub_painel}]]></subreportExpression>
+			</subreport>
+
+			<!-- 3. INDICADORES -->
+			<staticText><reportElement positionType="Float" forecolor="#FFFFFF" mode="Opaque" backcolor="#1F3864" x="0" y="100" width="555" height="14"/><box leftPadding="4"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[3. INDICADORES]]></text></staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="116" width="555" height="18"/>
+				<subreportParameter name="idProjeto"><subreportParameterExpression><![CDATA[$F{id}]]></subreportParameterExpression></subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{sub_indicador}]]></subreportExpression>
+			</subreport>
+
+			<!-- 4. ENTREGAS -->
+			<staticText><reportElement positionType="Float" forecolor="#FFFFFF" mode="Opaque" backcolor="#1F3864" x="0" y="140" width="555" height="14"/><box leftPadding="4"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[4. ENTREGAS]]></text></staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="156" width="555" height="18"/>
+				<subreportParameter name="idProjeto"><subreportParameterExpression><![CDATA[$F{id}]]></subreportParameterExpression></subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{sub_entregas}]]></subreportExpression>
+			</subreport>
+
+			<!-- 5. MARCOS CRITICOS -->
+			<staticText><reportElement positionType="Float" forecolor="#FFFFFF" mode="Opaque" backcolor="#1F3864" x="0" y="180" width="555" height="14"/><box leftPadding="4"/><textElement verticalAlignment="Middle"><font size="8" isBold="true"/></textElement><text><![CDATA[5. MARCOS CRÍTICOS]]></text></staticText>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="196" width="555" height="18"/>
+				<subreportParameter name="idProjeto"><subreportParameterExpression><![CDATA[$F{id}]]></subreportParameterExpression></subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression class="net.sf.jasperreports.engine.JasperReport"><![CDATA[$P{sub_marcos}]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+
+	<pageFooter>
+		<band height="16">
+			<textField>
+				<reportElement x="0" y="2" width="455" height="12"/>
+				<textElement><font size="6"/></textElement>
+				<textFieldExpression><![CDATA["OpenPMO / SIPGR — Ficha de Projeto GIP"]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="455" y="2" width="100" height="12"/>
+				<textElement textAlignment="Right"><font size="6"/></textElement>
+				<textFieldExpression><![CDATA["Página " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+</jasperReport>

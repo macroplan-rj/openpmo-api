@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="sub_cabecalho" pageWidth="555" pageHeight="842" columnWidth="555"
+              leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0"
+              whenNoDataType="AllSectionsNoDetail">
+	<parameter name="idProjeto" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[MATCH (w:Workpack:Project)-[:BELONGS_TO]->(pl:Plan)
+WHERE id(w) = $P!{idProjeto}
+OPTIONAL MATCH (w)<-[:FEATURES]-(:Property)-[:GROUPS*0..2]->(p:Property)-[:IS_DRIVEN_BY]->(pm:PropertyModel)
+WITH w, pl, collect([pm.name, coalesce(p.value, toString(p.date), toString(p.selectedValue))]) AS pairs
+OPTIONAL MATCH (pe:Person)-[:IS_STAKEHOLDER_IN]->(w)
+WITH w, pl, pairs, collect(DISTINCT pe.name) AS stk
+OPTIONAL MATCH (b:Baseline)-[:IS_BASELINED_BY|IS_PROPOSED_BY]-(w)
+WITH w, pl, pairs, stk, collect(DISTINCT b.name) AS bl
+WITH w, pl, stk, bl,
+  [k IN ['Programa do PPA','Responsável','Público-alvo','Justificativa','Resultados esperados',
+         'Data de início','Data de término','Unidade gestora','Demais unidades',
+         'Valor de investimento (CAPEX)','Valor de custeio (OPEX)']
+   | [k, coalesce(head([x IN pairs WHERE x[0]=k AND x[1] IS NOT NULL | x[1]]), '')]] AS f
+WITH w, pl, stk, bl, f,
+  toFloat(coalesce(head([x IN f WHERE x[0]='Valor de investimento (CAPEX)' AND x[1]<>'' | x[1]]),'0'))
++ toFloat(coalesce(head([x IN f WHERE x[0]='Valor de custeio (OPEX)'       AND x[1]<>'' | x[1]]),'0')) AS valorTotal
+UNWIND [
+  ['ID',                              toString(id(w)),                                            null],
+  ['Nome do Projeto',                 coalesce(w.name,''),                                        null],
+  ['Plano',                           coalesce(pl.name,''),                                       null],
+  ['Programa / Carteira Estratégica', head([x IN f WHERE x[0]='Programa do PPA' | x[1]]),          null],
+  ['Área de Resultado',               '— não existe como propriedade no modelo GIP',              null],
+  ['Gerente / Responsável',           head([x IN f WHERE x[0]='Responsável' | x[1]]),              null],
+  ['Partes Interessadas',             reduce(s='', n IN [x IN stk WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+', '+n END), null],
+  ['Público-alvo',                    head([x IN f WHERE x[0]='Público-alvo' | x[1]]),             null],
+  ['Justificativa',                   head([x IN f WHERE x[0]='Justificativa' | x[1]]),            null],
+  ['Resultados Esperados',            head([x IN f WHERE x[0]='Resultados esperados' | x[1]]),     null],
+  ['Data de Início',                  left(head([x IN f WHERE x[0]='Data de início' | x[1]]),10),  null],
+  ['Data Prevista de Término',        left(head([x IN f WHERE x[0]='Data de término' | x[1]]),10), null],
+  ['Valor estimado do projeto',       '',                                                    valorTotal],
+  ['Unidade Gestora',                 head([x IN f WHERE x[0]='Unidade gestora' | x[1]]),          null],
+  ['Demais unidades envolvidas',      head([x IN f WHERE x[0]='Demais unidades' | x[1]]),          null],
+  ['Linha de base',                   coalesce(head(bl),''),                                       null]
+] AS row
+RETURN row[0] AS campo, row[1] AS valor, row[2] AS valorNum]]>
+	</queryString>
+	<field name="campo"    class="java.lang.String"/>
+	<field name="valor"    class="java.lang.String"/>
+	<field name="valorNum" class="java.lang.Double"/>
+	<detail>
+		<band height="14">
+			<textField>
+				<reportElement stretchType="ContainerHeight" mode="Opaque" backcolor="#F2F5F8" x="0" y="0" width="170" height="14"/>
+				<box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box>
+				<textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement>
+				<textFieldExpression><![CDATA[$F{campo}]]></textFieldExpression>
+			</textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true">
+				<reportElement x="170" y="0" width="385" height="14">
+					<printWhenExpression><![CDATA[$F{valorNum} == null]]></printWhenExpression>
+				</reportElement>
+				<box leftPadding="3" rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box>
+				<textElement verticalAlignment="Middle"><font size="7"/></textElement>
+				<textFieldExpression><![CDATA[$F{valor}]]></textFieldExpression>
+			</textField>
+			<textField pattern="¤ #,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="ContainerHeight" x="170" y="0" width="385" height="14">
+					<printWhenExpression><![CDATA[$F{valorNum} != null]]></printWhenExpression>
+				</reportElement>
+				<box leftPadding="3" rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box>
+				<textElement verticalAlignment="Middle"><font size="7"/></textElement>
+				<textFieldExpression><![CDATA[$F{valorNum}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<noData>
+		<band height="14">
+			<staticText><reportElement x="0" y="0" width="555" height="14"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7" isItalic="true"/></textElement><text><![CDATA[Projeto não encontrado.]]></text></staticText>
+		</band>
+	</noData>
+</jasperReport>
