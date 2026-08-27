@@ -9,36 +9,70 @@
 	<queryString>
 		<![CDATA[MATCH (w:Workpack:Project)-[:BELONGS_TO]->(pl:Plan)
 WHERE id(w) = $P!{idProjeto}
+
+// Nome de propriedade e comparado NORMALIZADO: minusculas, sem espaco nas pontas
+// e sem ZERO WIDTH SPACE (U+200B). O cadastro tem nomes que so diferem por esses
+// caracteres invisiveis — ha duas PropertyModel "Data de Inicio", uma com U+200B —
+// e comparar por literal falha em silencio, devolvendo campo vazio.
 OPTIONAL MATCH (w)<-[:FEATURES]-(:Property)-[:GROUPS*0..2]->(p:Property)-[:IS_DRIVEN_BY]->(pm:PropertyModel)
-WITH w, pl, collect([pm.name, coalesce(p.value, toString(p.date), toString(p.selectedValue))]) AS pairs
-OPTIONAL MATCH (pe:Person)-[:IS_STAKEHOLDER_IN]->(w)
+WITH w, pl, collect([toLower(trim(replace(pm.name, '\u200B', ''))),
+                     coalesce(p.value, toString(p.date), toString(p.selectedValue))]) AS pairs
+
+// Partes interessadas inclui Organization, nao so Person: ambos carregam o rotulo
+// Actor e ambos sao cadastrados como stakeholder.
+OPTIONAL MATCH (pe:Actor)-[:IS_STAKEHOLDER_IN]->(w)
 WITH w, pl, pairs, collect(DISTINCT pe.name) AS stk
+
+// Linha de base: a ativa, nao a lista inteira. Um projeto acumula propostas.
 OPTIONAL MATCH (b:Baseline)-[:IS_BASELINED_BY|IS_PROPOSED_BY]-(w)
-WITH w, pl, pairs, stk, collect(DISTINCT b.name) AS bl
-WITH w, pl, stk, bl,
-  [k IN ['Programa do PPA','Responsável','Público-alvo','Justificativa','Resultados esperados',
-         'Data de início','Data de término','Unidade gestora','Demais unidades',
-         'Valor de investimento (CAPEX)','Valor de custeio (OPEX)']
-   | [k, coalesce(head([x IN pairs WHERE x[0]=k AND x[1] IS NOT NULL | x[1]]), '')]] AS f
+WITH w, pl, pairs, stk,
+     collect(DISTINCT CASE WHEN coalesce(b.active,false) THEN b.name END) AS blAtiva,
+     collect(DISTINCT b.name) AS blTodas
+WITH w, pl, pairs, stk,
+     [x IN blAtiva WHERE x IS NOT NULL] + [x IN blTodas WHERE x IS NOT NULL] AS bl
+
+// Um mesmo campo do xlsx tem nomes diferentes conforme o PlanModel. Cada entrada
+// abaixo lista os aliases conhecidos, ja normalizados.
+WITH w, pl, stk, bl, pairs,
+  [ap IN [
+    {k:'programa',    a:['programa do ppa','programa']},
+    {k:'responsavel', a:['responsável','responsavel','gerente','gerente/responsável']},
+    {k:'publico',     a:['público-alvo','publico-alvo']},
+    {k:'justif',      a:['justificativa']},
+    {k:'resultados',  a:['resultados esperados']},
+    {k:'dtinicio',    a:['data de início','data de inicio']},
+    {k:'dtfim',       a:['data de término','data de termino','data prevista de término','data prevista de termino']},
+    {k:'unidade',     a:['unidade gestora']},
+    {k:'demais',      a:['demais unidades','demais unidades envolvidas','outras unidades envolvidas']},
+    {k:'area',        a:['área de resultado','area de resultado']},
+    {k:'capex',       a:['valor de investimento (capex)','valor de investimento','valor financeiro do investimento']},
+    {k:'opex',        a:['valor de custeio (opex)','valor do custeio da operação']},
+    {k:'valorunico',  a:['valor estimado do projeto']}
+   ] | [ap.k, coalesce(head([x IN pairs WHERE x[0] IN ap.a AND x[1] IS NOT NULL AND x[1] <> '' | x[1]]), '')]] AS f
+
+// Valor estimado: onde existe campo unico, usa-o; onde o modelo separa, soma CAPEX+OPEX.
 WITH w, pl, stk, bl, f,
-  toFloat(coalesce(head([x IN f WHERE x[0]='Valor de investimento (CAPEX)' AND x[1]<>'' | x[1]]),'0'))
-+ toFloat(coalesce(head([x IN f WHERE x[0]='Valor de custeio (OPEX)'       AND x[1]<>'' | x[1]]),'0')) AS valorTotal
+  head([x IN f WHERE x[0]='valorunico' | x[1]]) AS vUnico,
+  toFloat(coalesce(head([x IN f WHERE x[0]='capex' AND x[1]<>'' | x[1]]),'0'))
++ toFloat(coalesce(head([x IN f WHERE x[0]='opex'  AND x[1]<>'' | x[1]]),'0')) AS vSoma
+WITH w, pl, stk, bl, f,
+  CASE WHEN vUnico <> '' THEN toFloat(vUnico) ELSE vSoma END AS valorTotal
 UNWIND [
   ['ID',                              toString(id(w)),                                            null],
   ['Nome do Projeto',                 coalesce(w.name,''),                                        null],
   ['Plano',                           coalesce(pl.name,''),                                       null],
-  ['Programa / Carteira Estratégica', head([x IN f WHERE x[0]='Programa do PPA' | x[1]]),          null],
-  ['Área de Resultado',               '— não existe como propriedade no modelo GIP',              null],
-  ['Gerente / Responsável',           head([x IN f WHERE x[0]='Responsável' | x[1]]),              null],
+  ['Programa / Carteira Estratégica', head([x IN f WHERE x[0]='programa' | x[1]]),                 null],
+  ['Área de Resultado',               head([x IN f WHERE x[0]='area' | x[1]]),                     null],
+  ['Gerente / Responsável',           head([x IN f WHERE x[0]='responsavel' | x[1]]),              null],
   ['Partes Interessadas',             reduce(s='', n IN [x IN stk WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+', '+n END), null],
-  ['Público-alvo',                    head([x IN f WHERE x[0]='Público-alvo' | x[1]]),             null],
-  ['Justificativa',                   head([x IN f WHERE x[0]='Justificativa' | x[1]]),            null],
-  ['Resultados Esperados',            head([x IN f WHERE x[0]='Resultados esperados' | x[1]]),     null],
-  ['Data de Início',                  left(head([x IN f WHERE x[0]='Data de início' | x[1]]),10),  null],
-  ['Data Prevista de Término',        left(head([x IN f WHERE x[0]='Data de término' | x[1]]),10), null],
+  ['Público-alvo',                    head([x IN f WHERE x[0]='publico' | x[1]]),                  null],
+  ['Justificativa',                   head([x IN f WHERE x[0]='justif' | x[1]]),                   null],
+  ['Resultados Esperados',            head([x IN f WHERE x[0]='resultados' | x[1]]),               null],
+  ['Data de Início',                  left(head([x IN f WHERE x[0]='dtinicio' | x[1]]),10),        null],
+  ['Data Prevista de Término',        left(head([x IN f WHERE x[0]='dtfim' | x[1]]),10),           null],
   ['Valor estimado do projeto',       '',                                                    valorTotal],
-  ['Unidade Gestora',                 head([x IN f WHERE x[0]='Unidade gestora' | x[1]]),          null],
-  ['Demais unidades envolvidas',      head([x IN f WHERE x[0]='Demais unidades' | x[1]]),          null],
+  ['Unidade Gestora',                 head([x IN f WHERE x[0]='unidade' | x[1]]),                  null],
+  ['Demais unidades envolvidas',      head([x IN f WHERE x[0]='demais' | x[1]]),                   null],
   ['Linha de base',                   coalesce(head(bl),''),                                       null]
 ] AS row
 RETURN row[0] AS campo, row[1] AS valor, row[2] AS valorNum]]>
