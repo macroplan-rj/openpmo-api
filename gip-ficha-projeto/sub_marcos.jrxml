@@ -11,7 +11,9 @@
 MATCH (m)-[:IS_IN*1..3]->(w:Workpack:Project)
 WHERE id(w) = $P!{idProjeto}
 WITH m, parent, date(left(toString(coalesce(m.newDate, m.date)), 10)) AS dtMarco
-OPTIONAL MATCH (o)-[:IS_REGISTERED_IN|RELATED_TO|FOR]-(parent)
+// Risco usa IS_FORSEEN_ON e Issue usa IS_REPORTED_FOR. Os tres tipos consultados
+// antes nao existem no grafo, e a coluna Ocorrencia saia sempre vazia.
+OPTIONAL MATCH (o)-[:IS_FORSEEN_ON|IS_REPORTED_FOR]->(parent)
 WHERE o:Risk OR o:Issue
 WITH m, parent, dtMarco, collect(DISTINCT o.name) AS ocorrencias
 RETURN
