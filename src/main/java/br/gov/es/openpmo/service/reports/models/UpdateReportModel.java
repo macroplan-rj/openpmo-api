@@ -2,11 +2,15 @@ package br.gov.es.openpmo.service.reports.models;
 
 import br.gov.es.openpmo.dto.reports.models.UpdateReportModelFileItem;
 import br.gov.es.openpmo.dto.reports.models.UpdateReportModelRequest;
+import br.gov.es.openpmo.exception.NegocioException;
 import br.gov.es.openpmo.model.actors.File;
+import br.gov.es.openpmo.model.office.plan.PlanModel;
 import br.gov.es.openpmo.model.properties.models.PropertyModel;
 import br.gov.es.openpmo.model.reports.ReportDesign;
 import br.gov.es.openpmo.model.reports.ReportFormat;
+import br.gov.es.openpmo.repository.PlanModelRepository;
 import br.gov.es.openpmo.repository.ReportDesignRepository;
+import br.gov.es.openpmo.utils.ApplicationMessage;
 import br.gov.es.openpmo.service.workpack.UpdatePropertyModels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +20,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -29,6 +34,8 @@ public class UpdateReportModel {
 
   private final ReportDesignRepository reportDesignRepository;
 
+  private final PlanModelRepository planModelRepository;
+
   private final CreateReportModelTemplateSource createReportModelTemplateSource;
 
   private final GetPropertyModelFromDto getPropertyModelFromDto;
@@ -41,12 +48,14 @@ public class UpdateReportModel {
 
   public UpdateReportModel(
     final ReportDesignRepository reportDesignRepository,
+    final PlanModelRepository planModelRepository,
     final CreateReportModelTemplateSource createReportModelTemplateSource,
     final GetPropertyModelFromDto getPropertyModelFromDto,
     final GetReportModelById getReportModelById,
     final UpdatePropertyModels updatePropertyModels,
     final OnlyOneReportModelTemplateSourceValidator onlyOneReportModelTemplateSourceValidator) {
     this.reportDesignRepository = reportDesignRepository;
+    this.planModelRepository = planModelRepository;
     this.createReportModelTemplateSource = createReportModelTemplateSource;
     this.getPropertyModelFromDto = getPropertyModelFromDto;
     this.getReportModelById = getReportModelById;
@@ -118,9 +127,39 @@ public class UpdateReportModel {
     reportDesign.setFullName(request.getFullName());
     final ReportFormat preferredOutputFormat = getPreferredOutputFormat(request);
     reportDesign.setPreferredOutputFormat(preferredOutputFormat);
+    this.updatePlanModel(reportDesign, request);
     this.updatePropertyModels(reportDesign, request);
     this.updateTemplateSource(reportDesign, request);
     log.debug("ReportDesign atualizado com sucesso.");
+  }
+
+  /**
+   * O vinculo com o PlanModel so podia ser definido na criacao: errar o modelo
+   * de plano obrigava a recriar o relatorio e reimportar todos os arquivos.
+   *
+   * Campo opcional de proposito — quem nao envia idPlanModel preserva o vinculo
+   * atual, entao clientes antigos continuam funcionando.
+   */
+  private void updatePlanModel(
+    final ReportDesign reportDesign,
+    final UpdateReportModelRequest request
+  ) {
+    final Long idPlanModel = request.getIdPlanModel();
+    if (idPlanModel == null) {
+      log.debug("idPlanModel nao informado, preservando o vinculo atual do reportDesignId={}", reportDesign.getId());
+      return;
+    }
+    if (idPlanModel.equals(reportDesign.getIdPlanModel())) {
+      log.debug("idPlanModel inalterado para o reportDesignId={}", reportDesign.getId());
+      return;
+    }
+    final Optional<PlanModel> planModel = this.planModelRepository.findById(idPlanModel);
+    if (!planModel.isPresent()) {
+      log.debug("PlanModel nao encontrado com o ID {}.", idPlanModel);
+      throw new NegocioException(ApplicationMessage.PLAN_MODEL_NOT_FOUND);
+    }
+    log.debug("Alterando o PlanModel do reportDesignId={} para {}", reportDesign.getId(), idPlanModel);
+    reportDesign.setPlanModel(planModel.get());
   }
 
   private void updatePropertyModels(

@@ -12,6 +12,11 @@ public class UpdateReportModelRequest {
   @NotNull
   private final Long id;
 
+  // Sem este campo o vinculo Relatorio-PlanModel so podia ser definido na
+  // criacao. Errar o PlanModel obrigava a recriar o modelo e reimportar todos
+  // os arquivos. Opcional: null preserva o vinculo atual.
+  private final Long idPlanModel;
+
   @NotNull
   @NotBlank
   private final String name;
@@ -26,6 +31,7 @@ public class UpdateReportModelRequest {
 
   public UpdateReportModelRequest(
     final Long id,
+    final Long idPlanModel,
     final String name,
     final String fullName,
     final ReportFormat preferredOutputFormat,
@@ -33,6 +39,7 @@ public class UpdateReportModelRequest {
     final List<UpdateReportModelFileItem> files
   ) {
     this.id = id;
+    this.idPlanModel = idPlanModel;
     this.name = name;
     this.fullName = fullName;
     this.preferredOutputFormat = preferredOutputFormat;
@@ -42,6 +49,10 @@ public class UpdateReportModelRequest {
 
   public Long getId() {
     return this.id;
+  }
+
+  public Long getIdPlanModel() {
+    return this.idPlanModel;
   }
 
   public String getName() {
