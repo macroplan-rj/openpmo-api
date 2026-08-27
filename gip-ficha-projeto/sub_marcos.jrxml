@@ -19,7 +19,7 @@ WITH m, parent, dtMarco, collect(DISTINCT o.name) AS ocorrencias
 RETURN
   CASE WHEN 'Deliverable' IN labels(parent) THEN parent.name ELSE '-' END AS entrega,
   m.name AS marco,
-  toString(dtMarco) AS dataMarco,
+  CASE WHEN toString(dtMarco) IS NULL OR toString(dtMarco) = '' THEN '' ELSE substring(toString(dtMarco),8,2)+'/'+substring(toString(dtMarco),5,2)+'/'+substring(toString(dtMarco),0,4) END AS dataMarco,
   CASE WHEN m.canceled  THEN 'Cancelado'
        WHEN m.completed THEN 'Concluído'
        WHEN dtMarco < date() THEN 'Atrasado'
@@ -34,20 +34,22 @@ ORDER BY dataMarco, marco]]>
 	<field name="ocorrenciaRiscos" class="java.lang.String"/>
 	<columnHeader>
 		<band height="18">
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="0"   y="0" width="130" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Entrega]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="130" y="0" width="185" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Marco Crítico]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="315" y="0" width="60"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Data]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="375" y="0" width="60"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Status]]></text></staticText>
-			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="435" y="0" width="120" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Ocorrência / Riscos]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="0" y="0" width="32" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[ID]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="32"   y="0" width="120" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Entrega]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="152" y="0" width="175" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Marco Crítico]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="327" y="0" width="58"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Data]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="385" y="0" width="58"  height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Status]]></text></staticText>
+			<staticText><reportElement mode="Opaque" backcolor="#E8EDF3" x="443" y="0" width="112" height="18"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#9AA7B5"/></box><textElement verticalAlignment="Middle"><font size="7" isBold="true"/></textElement><text><![CDATA[Ocorrência / Riscos]]></text></staticText>
 		</band>
 	</columnHeader>
 	<detail>
 		<band height="16">
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="0"   y="0" width="130" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{entrega}]]></textFieldExpression></textField>
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="130" y="0" width="185" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{marco}]]></textFieldExpression></textField>
-			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="315" y="0" width="60"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{dataMarco}]]></textFieldExpression></textField>
-			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="375" y="0" width="60"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{statusMarco}]]></textFieldExpression></textField>
-			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="435" y="0" width="120" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{ocorrenciaRiscos}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="0" y="0" width="32" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$P{idProjeto}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="32"   y="0" width="120" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{entrega}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="152" y="0" width="175" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{marco}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="327" y="0" width="58"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{dataMarco}]]></textFieldExpression></textField>
+			<textField isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="385" y="0" width="58"  height="16"/><box><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement textAlignment="Center" verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{statusMarco}]]></textFieldExpression></textField>
+			<textField textAdjust="StretchHeight" isBlankWhenNull="true"><reportElement stretchType="RelativeToTallestObject" x="443" y="0" width="112" height="16"/><box leftPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box><textElement verticalAlignment="Middle"><font size="7"/></textElement><textFieldExpression><![CDATA[$F{ocorrenciaRiscos}]]></textFieldExpression></textField>
 		</band>
 	</detail>
 	<noData>

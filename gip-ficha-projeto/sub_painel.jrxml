@@ -65,36 +65,36 @@ WITH w, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos, sitEntreg
 WITH w, bl, entregas, qtdConsumos, planW, realW, planC, realC, riscos, sitEntregas, f,
   CASE WHEN vUnico <> '' THEN toFloat(vUnico) ELSE vSoma END AS custoPrevisto
 UNWIND [
-  ['Nome do Projeto',                   coalesce(w.name,''),                                    null],
-  ['Data de Referência',                toString(date()),                                       null],
-  ['Linha de base',                     coalesce(head(bl),''),                                  null],
-  ['Unidade Gestora',                   head([x IN f WHERE x[0]='unidade' | x[1]]),             null],
-  ['Situação',                          head([x IN f WHERE x[0]='situacao' | x[1]]),            null],
-  ['Custo total previsto',              '',                                            custoPrevisto],
+  ['Nome do Projeto',                   coalesce(w.name,''),                                    null, false],
+  ['Data de Referência',                substring(toString(date()),8,2)+'/'+substring(toString(date()),5,2)+'/'+substring(toString(date()),0,4), null, false],
+  ['Linha de base',                     coalesce(head(bl),''),                                  null, false],
+  ['Unidade Gestora',                   head([x IN f WHERE x[0]='unidade' | x[1]]),             null, false],
+  ['Custo total previsto',              '',                                     custoPrevisto, true],
   ['Custo realizado',
      CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo realizado neste projeto' ELSE '' END,
-     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END],
-  ['Execução física planejada',         '',       CASE WHEN planW>0 THEN round(planW,2) ELSE null END],
-  ['Execução física realizada',         '',       CASE WHEN planW>0 THEN round(realW,2) ELSE null END],
-  ['% cumprimento físico',              '',       CASE WHEN planW>0 THEN round(100.0*realW/planW,2) ELSE null END],
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END, true],
+  ['Execução física planejada',         '',       CASE WHEN planW>0 THEN round(planW,2) ELSE null END, false],
+  ['Execução física realizada',         '',       CASE WHEN planW>0 THEN round(realW,2) ELSE null END, false],
+  ['% cumprimento físico',              '',       CASE WHEN planW>0 THEN round(100.0*realW/planW,2) ELSE null END, false],
   ['Execução financeira planejada (%)',
      CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo neste projeto' ELSE '' END,
-     CASE WHEN qtdConsumos=0 THEN null ELSE round(planC,2) END],
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(planC,2) END, true],
   ['Execução financeira realizada (%)',
      CASE WHEN qtdConsumos=0 THEN '— sem lançamento de custo neste projeto' ELSE '' END,
-     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END],
+     CASE WHEN qtdConsumos=0 THEN null ELSE round(realC,2) END, true],
   ['% cumprimento financeiro',
      CASE WHEN planC>0 THEN '' ELSE '— sem custo planejado neste projeto' END,
-     CASE WHEN planC>0 THEN round(100.0*realC/planC,2) ELSE null END],
-  ['N° de Entregas cadastradas',        toString(size(entregas)),                               null],
-  ['Status das Entregas',               reduce(s='', n IN [x IN sitEntregas WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null],
-  ['Riscos',                            reduce(s='', n IN [x IN riscos      WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null]
+     CASE WHEN planC>0 THEN round(100.0*realC/planC,2) ELSE null END, false],
+  ['N° de Entregas cadastradas',        toString(size(entregas)),                               null, false],
+  ['Status das Entregas',               reduce(s='', n IN [x IN sitEntregas WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null, false],
+  ['Riscos',                            reduce(s='', n IN [x IN riscos      WHERE x IS NOT NULL] | CASE WHEN s='' THEN n ELSE s+'; '+n END), null, false]
 ] AS row
-RETURN row[0] AS campo, row[1] AS valor, row[2] AS valorNum]]>
+RETURN row[0] AS campo, row[1] AS valor, row[2] AS valorNum, row[3] AS ehMoeda]]>
 	</queryString>
 	<field name="campo"    class="java.lang.String"/>
 	<field name="valor"    class="java.lang.String"/>
 	<field name="valorNum" class="java.lang.Double"/>
+	<field name="ehMoeda" class="java.lang.Boolean"/>
 	<detail>
 		<band height="14">
 			<textField>
@@ -111,9 +111,17 @@ RETURN row[0] AS campo, row[1] AS valor, row[2] AS valorNum]]>
 				<textElement verticalAlignment="Middle"><font size="7"/></textElement>
 				<textFieldExpression><![CDATA[$F{valor}]]></textFieldExpression>
 			</textField>
+			<textField pattern="¤ #,##0.00" isBlankWhenNull="true">
+				<reportElement stretchType="ContainerHeight" x="170" y="0" width="385" height="14">
+					<printWhenExpression><![CDATA[$F{valorNum} != null && Boolean.TRUE.equals($F{ehMoeda})]]></printWhenExpression>
+				</reportElement>
+				<box leftPadding="3" rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box>
+				<textElement verticalAlignment="Middle"><font size="7"/></textElement>
+				<textFieldExpression><![CDATA[$F{valorNum}]]></textFieldExpression>
+			</textField>
 			<textField pattern="#,##0.00" isBlankWhenNull="true">
 				<reportElement stretchType="ContainerHeight" x="170" y="0" width="385" height="14">
-					<printWhenExpression><![CDATA[$F{valorNum} != null]]></printWhenExpression>
+					<printWhenExpression><![CDATA[$F{valorNum} != null && !Boolean.TRUE.equals($F{ehMoeda})]]></printWhenExpression>
 				</reportElement>
 				<box leftPadding="3" rightPadding="3"><pen lineWidth="0.25" lineColor="#C4CCD6"/></box>
 				<textElement verticalAlignment="Middle"><font size="7"/></textElement>
