@@ -4,6 +4,7 @@ import br.gov.es.openpmo.dto.ccbmembers.CanUseCCBProjection;
 import br.gov.es.openpmo.dto.menu.PlanWorkpackDto;
 import br.gov.es.openpmo.dto.menu.WorkpackResultDto;
 import br.gov.es.openpmo.dto.universalSearch.UniversalSearchItemQueryResult;
+import br.gov.es.openpmo.dto.workpack.DeliveryForecastDto;
 import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackBreakdownClassificationDto;
 import br.gov.es.openpmo.model.baselines.Baseline;
 import br.gov.es.openpmo.model.office.plan.Plan;
@@ -747,6 +748,34 @@ public interface WorkpackRepository extends Neo4jRepository<Workpack, Long>, Cus
       "WHERE id(w)=$workpackId " +
       "RETURN ID(children) ")
   Set<Long> findAllChildren(@Param("workpackId") Long workpackId);
+
+  /**
+   * Previsao de entrega dos Deliverables informados (US-003): a data fim do proprio
+   * cronograma master. Snapshots de baseline ficam de fora — apenas eles usam
+   * category = 'SNAPSHOT'.
+   */
+  @Query("MATCH (d:Deliverable{deleted:false})<-[:FEATURES]-(s:Schedule) " +
+      "WHERE ID(d) IN $ids " +
+      "AND coalesce(s.category, 'MASTER') <> 'SNAPSHOT' " +
+      "AND s.end IS NOT NULL " +
+      "RETURN ID(d) AS idWorkpack, s.end AS forecastDate ")
+  List<DeliveryForecastDto> findDeliverableDeliveryForecast(@Param("ids") List<Long> ids);
+
+  /**
+   * Previsao de entrega dos Projects informados (US-003): a data mais avancada entre
+   * todas as entregas e marcos criticos vinculados, em qualquer nivel de profundidade.
+   *
+   * <p>Sem apoc de proposito — max() sobre a string 'yyyy-MM-dd' ordena igual a data, e
+   * apoc pode nao estar instalado em producao.
+   */
+  @Query("MATCH (p:Workpack)<-[:IS_IN*]-(c:Workpack{deleted:false, canceled:false}) " +
+      "WHERE ID(p) IN $ids " +
+      "OPTIONAL MATCH (c)<-[:FEATURES]-(s:Schedule) " +
+      "WHERE coalesce(s.category, 'MASTER') <> 'SNAPSHOT' " +
+      "WITH p, coalesce(s.end, left(c.date, 10)) AS data " +
+      "WHERE data IS NOT NULL " +
+      "RETURN ID(p) AS idWorkpack, max(data) AS forecastDate ")
+  List<DeliveryForecastDto> findProjectDeliveryForecast(@Param("ids") List<Long> ids);
 
   @Query("MATCH (w:Workpack)<-[:FEATURES]-(p:Property)-[:IS_DRIVEN_BY]->(pm:PropertyModel) " +
       "WHERE id(w) = $id AND pm.name IN ['Situação', 'Status'] " +

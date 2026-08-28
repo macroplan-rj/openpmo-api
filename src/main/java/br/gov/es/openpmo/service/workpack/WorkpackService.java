@@ -34,6 +34,7 @@ import br.gov.es.openpmo.dto.workpack.TextDto;
 import br.gov.es.openpmo.dto.workpack.ToggleDto;
 import br.gov.es.openpmo.dto.workpack.UnitSelectionDto;
 import br.gov.es.openpmo.dto.workpack.WorkpackDetailDto;
+import br.gov.es.openpmo.dto.workpack.DeliveryForecastDto;
 import br.gov.es.openpmo.dto.workpack.WorkpackDetailParentDto;
 import br.gov.es.openpmo.dto.workpack.WorkpackParamDto;
 import br.gov.es.openpmo.exception.NegocioException;
@@ -133,6 +134,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1033,6 +1035,52 @@ public class WorkpackService {
   public DashboardMonthDto getDashboardMonthDto(Workpack workpack, Long idPlan) {
     if (workpack instanceof Milestone) return null;
     return dashboardCacheUtil.getDashboardMonthDto(workpack.getId(), workpack instanceof Deliverable, idPlan);
+  }
+
+  /**
+   * Previsao de entrega de uma listagem inteira da EAP (US-003), em no maximo duas
+   * consultas — uma para Deliverables, outra para Projects — independente da quantidade
+   * de cards. Milestone fica de fora: a data dele ja trafega em {@code date}.
+   *
+   * @return mapa id do workpack -> previsao; sem entrada quando nao ha previsao
+   */
+  public Map<Long, LocalDate> getDeliveryForecastMap(final List<Workpack> workpacks) {
+    final List<Long> deliverableIds = new ArrayList<>();
+    final List<Long> projectIds = new ArrayList<>();
+
+    for (final Workpack workpack : workpacks) {
+      if (workpack instanceof Deliverable) {
+        deliverableIds.add(workpack.getId());
+      } else if (workpack instanceof Project) {
+        projectIds.add(workpack.getId());
+      }
+    }
+
+    final Map<Long, LocalDate> forecasts = new HashMap<>();
+    if (!deliverableIds.isEmpty()) {
+      collectDeliveryForecasts(this.workpackRepository.findDeliverableDeliveryForecast(deliverableIds), forecasts);
+    }
+    if (!projectIds.isEmpty()) {
+      collectDeliveryForecasts(this.workpackRepository.findProjectDeliveryForecast(projectIds), forecasts);
+    }
+    return forecasts;
+  }
+
+  private static void collectDeliveryForecasts(
+    final List<DeliveryForecastDto> results,
+    final Map<Long, LocalDate> target
+  ) {
+    for (final DeliveryForecastDto result : results) {
+      if (result.getIdWorkpack() == null || result.getForecastDate() == null) {
+        continue;
+      }
+      try {
+        target.put(result.getIdWorkpack(), LocalDate.parse(result.getForecastDate()));
+      } catch (final DateTimeParseException ignored) {
+        // Data gravada fora do padrao yyyy-MM-dd: card fica sem previsao, em vez de
+        // derrubar a listagem inteira da EAP.
+      }
+    }
   }
 
 

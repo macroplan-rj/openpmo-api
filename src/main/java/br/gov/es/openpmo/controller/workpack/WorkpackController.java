@@ -45,6 +45,7 @@ import br.gov.es.openpmo.service.workpack.WorkpackService;
 import br.gov.es.openpmo.utils.ApplicationMessage;
 import br.gov.es.openpmo.utils.ResponseHandler;
 import io.swagger.annotations.Api;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -182,10 +183,11 @@ public class WorkpackController {
     final List<RiskWorkpackDto> risks = this.riskRepository.findByWorkpackIds(ids);
     final List<JournalInformationDto> journals = journalFinder.findAllJournalInformationDto(ids);
     final Map<Long, Boolean> mapCanUseCCB = this.workpackService.getCanUseCCBMap(ids);
-            
+    final Map<Long, LocalDate> deliveryForecasts = this.workpackService.getDeliveryForecastMap(workpacks);
+
     return  workpacks.stream()
                      .filter(workpack -> this.canAccessData.execute(workpack.getId(), authorization).canReadResource())
-                     .map(workpack -> this.mapToWorkpackDetailParentDto(workpack, idWorkpackModel, milestoneDates, risks, journals, idPlan, mapCanUseCCB))
+                     .map(workpack -> this.mapToWorkpackDetailParentDto(workpack, idWorkpackModel, milestoneDates, risks, journals, idPlan, mapCanUseCCB, deliveryForecasts))
                      .collect(Collectors.toList());
   }
 
@@ -472,7 +474,8 @@ public class WorkpackController {
     List<RiskWorkpackDto> risks,
     final List<JournalInformationDto> journals,
     final Long idPlan,
-    Map<Long, Boolean> mapCanUseCCB
+    Map<Long, Boolean> mapCanUseCCB,
+    Map<Long, LocalDate> deliveryForecasts
   ) {
     final WorkpackDetailParentDto itemDetail = this.workpackService.getWorkpackDetailParentDto(workpack, idWorkpackModel);
     
@@ -534,7 +537,9 @@ public class WorkpackController {
     itemDetail.setCanUseCCB(
         Boolean.TRUE.equals(mapCanUseCCB.get(workpack.getId()))
     );
-        
+
+    itemDetail.setDeliveryForecastDate(deliveryForecasts.get(workpack.getId()));
+
     return itemDetail;
   }
 }
