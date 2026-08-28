@@ -97,6 +97,14 @@ public abstract class WorkpackDetailParentDto {
   @JsonProperty("canUseCCB")
   private boolean canUseCCB;
 
+  /**
+   * Previsao de entrega exibida no card e na tira da EAP (US-003). Deliverable usa a data
+   * fim do proprio cronograma; Project, a mais avancada entre suas entregas e marcos.
+   * Nulo quando nao ha previsao — o front nao renderiza nada nesse caso.
+   */
+  @JsonFormat(pattern = "yyyy-MM-dd")
+  private LocalDate deliveryForecastDate;
+
   public static <TYPE extends WorkpackDetailParentDto> WorkpackDetailParentDto of(
       final Workpack workpack,
       final Supplier<TYPE> instanceSupplier) {
@@ -355,5 +363,13 @@ public abstract class WorkpackDetailParentDto {
 
   public void setCanUseCCB(boolean canUseCCB) {
     this.canUseCCB = canUseCCB;
+  }
+
+  public LocalDate getDeliveryForecastDate() {
+    return this.deliveryForecastDate;
+  }
+
+  public void setDeliveryForecastDate(LocalDate deliveryForecastDate) {
+    this.deliveryForecastDate = deliveryForecastDate;
   }
 }
