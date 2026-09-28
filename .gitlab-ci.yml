@@ -1,0 +1,5 @@
+variables:
+  AMBIENTE_DEV: 1
+
+include:
+  - component: $CI_SERVER_FQDN/cicd/build/pipeline@1
