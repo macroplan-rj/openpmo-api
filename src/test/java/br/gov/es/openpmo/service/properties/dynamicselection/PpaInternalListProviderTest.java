@@ -1,14 +1,14 @@
 package br.gov.es.openpmo.service.properties.dynamicselection;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.Assert.*;
 
 /** SPIKE US-020 — o provedor do PPA filtra pelo programa sem nenhuma regra fora dele. */
-class PpaInternalListProviderTest {
+public class PpaInternalListProviderTest {
 
   private static final List<String> PROGRAMAS = Arrays.asList(
     "Programa 5001 - Gestao Dinamica e Eficiente",
@@ -25,7 +25,7 @@ class PpaInternalListProviderTest {
     "Acao 1640 - 5001 - Educacao Fiscal");
 
   @Test
-  void programasNaoDependemDeNinguem() {
+  public void programasNaoDependemDeNinguem() {
     final PpaInternalListProvider p = new PpaInternalListProvider(PpaInternalListProvider.Nivel.PROGRAMA, () -> PROGRAMAS);
     assertEquals("ppa.programa", p.key());
     assertFalse(p.dependsOnKey().isPresent());
@@ -34,7 +34,7 @@ class PpaInternalListProviderTest {
   }
 
   @Test
-  void indicadoresFiltramPeloPrograma() {
+  public void indicadoresFiltramPeloPrograma() {
     final PpaInternalListProvider p = new PpaInternalListProvider(PpaInternalListProvider.Nivel.INDICADOR, () -> INDICADORES);
     assertEquals("ppa.programa", p.dependsOnKey().get());
     assertEquals(3, p.options(null).size());
@@ -44,7 +44,7 @@ class PpaInternalListProviderTest {
   }
 
   @Test
-  void acoesFiltramPeloProgramaEGuardamOProprioCodigo() {
+  public void acoesFiltramPeloProgramaEGuardamOProprioCodigo() {
     final PpaInternalListProvider p = new PpaInternalListProvider(PpaInternalListProvider.Nivel.ACAO, () -> ACOES);
     final List<DynamicSelectionProvider.Option> do5001 = p.options("5001");
     assertEquals(2, do5001.size());
@@ -55,7 +55,7 @@ class PpaInternalListProviderTest {
   }
 
   @Test
-  void itemForaDoFormatoEIgnoradoSemQuebrar() {
+  public void itemForaDoFormatoEIgnoradoSemQuebrar() {
     final PpaInternalListProvider p = new PpaInternalListProvider(PpaInternalListProvider.Nivel.PROGRAMA, () -> Arrays.asList("qualquer coisa", "Programa 7 - X"));
     assertEquals(1, p.options(null).size());
     assertEquals("7", p.options(null).get(0).getCode());
