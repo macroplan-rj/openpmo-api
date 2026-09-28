@@ -50,6 +50,10 @@ public final class GetPropertyValue {
           final Selection selection = (Selection) property;
           object = selection.getValue();
           break;
+        case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+          final DynamicSelection dynamicSelection = (DynamicSelection) property;
+          object = dynamicSelection.getValue();
+          break;
         case TYPE_MODEL_NAME_TEXT_AREA:
           final TextArea textArea = (TextArea) property;
           object = textArea.getValue();

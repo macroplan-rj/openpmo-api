@@ -21,7 +21,8 @@ import static com.fasterxml.jackson.annotation.JsonSubTypes.Type;
   @Type(value = CurrencyDto.class, name = "Currency"),
   @Type(value = LocalitySelectionDto.class, name = "LocalitySelection"),
   @Type(value = GroupDto.class, name = "Group"),
-  @Type(value = OrganizationSelectionDto.class, name = "OrganizationSelection")
+  @Type(value = OrganizationSelectionDto.class, name = "OrganizationSelection"),
+  @Type(value = DynamicSelectionDto.class, name = "DynamicSelection")
 })
 @ApiModel(subTypes = {
   IntegerDto.class,
@@ -35,7 +36,8 @@ import static com.fasterxml.jackson.annotation.JsonSubTypes.Type;
   CurrencyDto.class,
   LocalitySelectionDto.class,
   GroupDto.class,
-  OrganizationSelectionDto.class
+  OrganizationSelectionDto.class,
+  DynamicSelectionDto.class
 }, discriminator = "type", description = "Supertype of all Property.")
 @JsonTypeInfo(use = Id.NAME, property = "type", include = JsonTypeInfo.As.EXISTING_PROPERTY)
 public abstract class PropertyDto {

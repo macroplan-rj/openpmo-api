@@ -60,6 +60,12 @@ public final class GetPropertyByModel {
             return selection;
           }
           break;
+        case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+          final DynamicSelection dynamicSelection = (DynamicSelection) property;
+          if(dynamicSelection.getDriver() != null && dynamicSelection.getDriver().getId().equals(propertyModel.getId())) {
+            return dynamicSelection;
+          }
+          break;
         case TYPE_MODEL_NAME_TEXT_AREA:
           final TextArea textArea = (TextArea) property;
           if(textArea.getDriver() != null && textArea.getDriver().getId().equals(propertyModel.getId())) {

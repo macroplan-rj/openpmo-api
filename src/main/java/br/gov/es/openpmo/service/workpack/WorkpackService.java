@@ -28,6 +28,7 @@ import br.gov.es.openpmo.dto.workpack.ProjectDetailDto;
 import br.gov.es.openpmo.dto.workpack.ProjectDetailParentDto;
 import br.gov.es.openpmo.dto.workpack.PropertyDto;
 import br.gov.es.openpmo.dto.workpack.SelectionDto;
+import br.gov.es.openpmo.dto.workpack.DynamicSelectionDto;
 import br.gov.es.openpmo.dto.workpack.SimpleResource;
 import br.gov.es.openpmo.dto.workpack.TextAreaDto;
 import br.gov.es.openpmo.dto.workpack.TextDto;
@@ -55,6 +56,7 @@ import br.gov.es.openpmo.model.properties.Number;
 import br.gov.es.openpmo.model.properties.OrganizationSelection;
 import br.gov.es.openpmo.model.properties.Property;
 import br.gov.es.openpmo.model.properties.Selection;
+import br.gov.es.openpmo.model.properties.DynamicSelection;
 import br.gov.es.openpmo.model.properties.Text;
 import br.gov.es.openpmo.model.properties.TextArea;
 import br.gov.es.openpmo.model.properties.Toggle;
@@ -68,6 +70,7 @@ import br.gov.es.openpmo.model.properties.models.NumberModel;
 import br.gov.es.openpmo.model.properties.models.OrganizationSelectionModel;
 import br.gov.es.openpmo.model.properties.models.PropertyModel;
 import br.gov.es.openpmo.model.properties.models.SelectionModel;
+import br.gov.es.openpmo.model.properties.models.DynamicSelectionModel;
 import br.gov.es.openpmo.model.properties.models.TextAreaModel;
 import br.gov.es.openpmo.model.properties.models.TextModel;
 import br.gov.es.openpmo.model.properties.models.ToggleModel;
@@ -125,6 +128,7 @@ import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_NUMBER;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_ORGANIZATION_SELECTION;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_SELECTION;
+import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_DYNAMIC_SELECTION;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TEXT;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TEXT_AREA;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TOGGLE;
@@ -434,6 +438,17 @@ public class WorkpackService {
               propertyModelFound = true;
               if (selection.getDriver().isRequired()
                 && (selection.getValue() == null || selection.getValue().isEmpty())) {
+                throw new NegocioException(
+                  PROPERTY_VALUE_NOT_NULL + "$" + propertyModel.getLabel());
+              }
+            }
+            break;
+          case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+            final DynamicSelection dynamicSelection = (DynamicSelection) property;
+            if (dynamicSelection.getDriver().getId().equals(propertyModel.getId())) {
+              propertyModelFound = true;
+              if (dynamicSelection.getDriver().isRequired()
+                && (dynamicSelection.getValue() == null || dynamicSelection.getValue().isEmpty())) {
                 throw new NegocioException(
                   PROPERTY_VALUE_NOT_NULL + "$" + propertyModel.getLabel());
               }
@@ -903,6 +918,12 @@ public class WorkpackService {
         final HasValue<String> selectionUpdate = (Selection) propertyToUpdate;
         final Selection selection = (Selection) property;
         selectionUpdate.setValue(selection.getValue());
+        break;
+      case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+        final DynamicSelection dynamicSelectionUpdate = (DynamicSelection) propertyToUpdate;
+        final DynamicSelection dynamicSelection = (DynamicSelection) property;
+        dynamicSelectionUpdate.setValue(dynamicSelection.getValue());
+        dynamicSelectionUpdate.setLabel(dynamicSelection.getLabel());
         break;
       case TYPE_MODEL_NAME_TEXT_AREA:
         final HasValue<String> textAreaUpdate = (TextArea) propertyToUpdate;
@@ -1457,6 +1478,13 @@ public class WorkpackService {
             }
             list.add(selectionDto);
             break;
+          case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+            final DynamicSelectionDto dynamicSelectionDto = DynamicSelectionDto.of(property);
+            if (((DynamicSelection) property).getDriver() != null) {
+              dynamicSelectionDto.setIdPropertyModel(((DynamicSelection) property).getDriver().getId());
+            }
+            list.add(dynamicSelectionDto);
+            break;
           case TYPE_MODEL_NAME_TEXT_AREA:
             final TextAreaDto textAreaDto = TextAreaDto.of(property);
             if (((TextArea) property).getDriver() != null) {
@@ -1601,6 +1629,14 @@ public class WorkpackService {
         );
         selection.setDriver((SelectionModel) propertyModel);
         properties.add(selection);
+        break;
+      case "br.gov.es.openpmo.dto.workpack.DynamicSelectionDto":
+        final DynamicSelection dynamicSelection = this.modelMapper.map(
+          propertyDto,
+          DynamicSelection.class
+        );
+        dynamicSelection.setDriver((DynamicSelectionModel) propertyModel);
+        properties.add(dynamicSelection);
         break;
       case "br.gov.es.openpmo.dto.workpack.TextAreaDto":
         final TextArea textArea = this.modelMapper.map(

@@ -13,6 +13,7 @@ import br.gov.es.openpmo.dto.workpack.NumberDto;
 import br.gov.es.openpmo.dto.workpack.OrganizationSelectionDto;
 import br.gov.es.openpmo.dto.workpack.PropertyDto;
 import br.gov.es.openpmo.dto.workpack.SelectionDto;
+import br.gov.es.openpmo.dto.workpack.DynamicSelectionDto;
 import br.gov.es.openpmo.dto.workpack.TextAreaDto;
 import br.gov.es.openpmo.dto.workpack.TextDto;
 import br.gov.es.openpmo.dto.workpack.ToggleDto;
@@ -30,6 +31,7 @@ import br.gov.es.openpmo.model.properties.Number;
 import br.gov.es.openpmo.model.properties.OrganizationSelection;
 import br.gov.es.openpmo.model.properties.Property;
 import br.gov.es.openpmo.model.properties.Selection;
+import br.gov.es.openpmo.model.properties.DynamicSelection;
 import br.gov.es.openpmo.model.properties.Text;
 import br.gov.es.openpmo.model.properties.TextArea;
 import br.gov.es.openpmo.model.properties.Toggle;
@@ -72,6 +74,7 @@ import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_NUMBER;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_ORGANIZATION_SELECTION;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_SELECTION;
+import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_DYNAMIC_SELECTION;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TEXT;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TEXT_AREA;
 import static br.gov.es.openpmo.utils.PropertyInstanceTypeDeprecated.TYPE_MODEL_NAME_TOGGLE;
@@ -387,6 +390,14 @@ public class CostAccountService {
             costAccountDto.getModels().add(this.getPropertyModelDtoFromEntity.execute(((Selection) property).getDriver()));
           }
           list.add(selectionDto);
+          break;
+        case TYPE_MODEL_NAME_DYNAMIC_SELECTION:
+          final DynamicSelectionDto dynamicSelectionDto = DynamicSelectionDto.of(property);
+          if (((DynamicSelection) property).getDriver() != null) {
+            dynamicSelectionDto.setIdPropertyModel(((DynamicSelection) property).getDriver().getId());
+            costAccountDto.getModels().add(this.getPropertyModelDtoFromEntity.execute(((DynamicSelection) property).getDriver()));
+          }
+          list.add(dynamicSelectionDto);
           break;
         case TYPE_MODEL_NAME_TEXT_AREA:
           final TextAreaDto textAreaDto = TextAreaDto.of(property);

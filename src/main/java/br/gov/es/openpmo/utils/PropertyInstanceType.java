@@ -74,6 +74,12 @@ public enum PropertyInstanceType {
     OrganizationSelectionDto.class,
     OrganizationSelectionDto::of
   ),
+  TYPE_MODEL_NAME_DYNAMIC_SELECTION(
+    "br.gov.es.openpmo.model.properties.DynamicSelection",
+    DynamicSelectionDto::new,
+    DynamicSelectionDto.class,
+    DynamicSelectionDto::of
+  ),
   TYPE_MODEL_NAME_GROUP(
     "br.gov.es.openpmo.model.properties.Group",
     GroupDto::new,

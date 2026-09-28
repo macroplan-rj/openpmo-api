@@ -34,7 +34,8 @@ import static org.neo4j.ogm.annotation.Relationship.INCOMING;
   @JsonSubTypes.Type(value = Currency.class, name = "Currency"),
   @JsonSubTypes.Type(value = LocalitySelection.class, name = "LocalitySelection"),
   @JsonSubTypes.Type(value = Group.class, name = "Group"),
-  @JsonSubTypes.Type(value = OrganizationSelection.class, name = "OrganizationSelection")
+  @JsonSubTypes.Type(value = OrganizationSelection.class, name = "OrganizationSelection"),
+  @JsonSubTypes.Type(value = DynamicSelection.class, name = "DynamicSelection")
 })
 @ApiModel(subTypes = {
   Integer.class,
@@ -48,7 +49,8 @@ import static org.neo4j.ogm.annotation.Relationship.INCOMING;
   Currency.class,
   LocalitySelection.class,
   Group.class,
-  OrganizationSelection.class
+  OrganizationSelection.class,
+  DynamicSelection.class
 }, discriminator = "type", description = "Supertype of all Property.")
 @NodeEntity
 public abstract class Property<T, V> extends Entity implements HasValue<V>, Snapshotable<T> {

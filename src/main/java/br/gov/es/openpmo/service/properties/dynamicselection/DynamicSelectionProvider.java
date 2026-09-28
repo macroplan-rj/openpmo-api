@@ -4,14 +4,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * SPIKE (US-020 / SA-610) — contrato do provedor de opcoes da propriedade "Selecao dinamica".
- * O OpenPMO conhece so esta interface; quem sabe de PPA, UO ou Plano Estrategico e a implementacao
- * (bean no classpath, plugin, chamada HTTP...). Descartavel: existe para validar o desenho com o
- * Vagner, nao para ir a producao neste formato.
+ * Contrato do provedor de opcoes da propriedade "Selecao dinamica" (SD #10548 / SA-610).
+ *
+ * O OpenPMO conhece so esta interface. Quem sabe de PPA, Unidade Orcamentaria ou Plano
+ * Estrategico e a implementacao: um bean Spring no classpath (um "plugin") ou uma lista interna
+ * carregada por seed ({@link InternalListProvider}). O registro e por descoberta, em
+ * {@link DynamicSelectionProviderRegistry}.
  */
 public interface DynamicSelectionProvider {
 
-  /** Chave estavel gravada no PropertyModel, ex.: "ppa.indicador". */
+  /** Chave estavel gravada no modelo, ex.: "ppa.indicador". */
   String key();
 
   /** Rotulo mostrado na administracao do modelo, ex.: "PPA — Indicadores". */
@@ -20,11 +22,11 @@ public interface DynamicSelectionProvider {
   /** Chave do provedor-pai quando esta lista depende de outra (cascata). */
   Optional<String> dependsOnKey();
 
-  /** Opcoes; com parentCode filtra pelo valor escolhido na propriedade-pai. */
-  List<Option> options(String parentCode);
+  /** Opcoes; com codigos do pai, filtra pelos itens desses pais. Lista vazia ou null = todas. */
+  List<Option> options(List<String> parentCodes);
 
-  /** Codigo -> opcao (rotulo), para leitura da ficha e relatorios. */
-  Optional<Option> resolve(String code);
+  /** Codigos -> opcoes (rotulos), para exibicao e gravacao do rotulo junto com o codigo. */
+  List<Option> resolve(List<String> codes);
 
   final class Option {
     private final String code;

@@ -25,6 +25,8 @@ public class PropertyModelType {
   public static final String TYPE_NAME_MODEL_ORGANIZATION_SELECTION = "br.gov.es.openpmo.model.properties.models" +
                                                                       ".OrganizationSelectionModel";
 
+  public static final String TYPE_NAME_MODEL_DYNAMIC_SELECTION = "br.gov.es.openpmo.model.properties.models.DynamicSelectionModel";
+
   public static final String TYPE_NAME_MODEL_GROUP = "br.gov.es.openpmo.model.properties.models.GroupModel";
 
 }
