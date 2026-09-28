@@ -66,11 +66,15 @@ public class MilestoneController {
       JournalAction.EDITED,
       idPerson
     );
-    if (milestone.isReasonRequired()) {
-      final String justificativa = request.getReason();
-      if (justificativa == null || justificativa.trim().isEmpty()) {
-        throw new NegocioException(ApplicationMessage.REASON_NOT_PRESENT);
-      }
+    final String justificativa = request.getReason();
+    final boolean temJustificativa = justificativa != null && !justificativa.trim().isEmpty();
+    if (milestone.isReasonRequired() && !temJustificativa) {
+      throw new NegocioException(ApplicationMessage.REASON_NOT_PRESENT);
+    }
+    // SD #10593: a justificativa vai para o diario sempre que vier preenchida, e nao so
+    // quando a baseline a exige. O card passou a exigir o texto em toda alteracao (inclusive
+    // so a conclusao, em que a data chega igual); sem isto o texto era descartado aqui.
+    if (temJustificativa) {
       this.journalCreator.dateChanged(
         milestone,
         JournalAction.EDITED,
