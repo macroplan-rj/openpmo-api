@@ -151,6 +151,14 @@ public class UpdatePropertyModels {
         selectionModelUpdate.setPossibleValues(selectionModel.getPossibleValues());
         selectionModelUpdate.setDefaultValue(selectionModel.getDefaultValue());
         break;
+      case PropertyModelType.TYPE_NAME_MODEL_DYNAMIC_SELECTION:
+        final DynamicSelectionModel dynamicSelectionModelUpdate = (DynamicSelectionModel) propertyModelUpdate;
+        final DynamicSelectionModel dynamicSelectionModel = (DynamicSelectionModel) propertyModel;
+        dynamicSelectionModelUpdate.setProviderKey(dynamicSelectionModel.getProviderKey());
+        dynamicSelectionModelUpdate.setDependsOn(dynamicSelectionModel.getDependsOn());
+        dynamicSelectionModelUpdate.setMultipleSelection(dynamicSelectionModel.isMultipleSelection());
+        dynamicSelectionModelUpdate.setDefaultValue(dynamicSelectionModel.getDefaultValue());
+        break;
       case PropertyModelType.TYPE_NAME_MODEL_TEXT_AREA:
         final TextAreaModel textAreaModelUpdate = (TextAreaModel) propertyModelUpdate;
         final TextAreaModel textAreaModel = (TextAreaModel) propertyModel;

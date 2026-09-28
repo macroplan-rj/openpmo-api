@@ -14,6 +14,7 @@ public final class PropertyInstanceTypeDeprecated {
   public static final String TYPE_MODEL_NAME_CURRENCY = "br.gov.es.openpmo.model.properties.Currency";
   public static final String TYPE_MODEL_NAME_LOCALITY_SELECTION = "br.gov.es.openpmo.model.properties.LocalitySelection";
   public static final String TYPE_MODEL_NAME_ORGANIZATION_SELECTION = "br.gov.es.openpmo.model.properties.OrganizationSelection";
+  public static final String TYPE_MODEL_NAME_DYNAMIC_SELECTION = "br.gov.es.openpmo.model.properties.DynamicSelection";
   public static final String TYPE_MODEL_NAME_GROUP = "br.gov.es.openpmo.model.properties.Group";
 
 }
