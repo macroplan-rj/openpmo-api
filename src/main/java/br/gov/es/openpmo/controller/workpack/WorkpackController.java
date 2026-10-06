@@ -25,6 +25,7 @@ import br.gov.es.openpmo.enumerator.PermissionLevelEnum;
 import br.gov.es.openpmo.exception.NegocioException;
 import br.gov.es.openpmo.model.journals.JournalAction;
 import br.gov.es.openpmo.model.properties.Property;
+import br.gov.es.openpmo.model.properties.Selection;
 import br.gov.es.openpmo.model.risk.Risk;
 import br.gov.es.openpmo.model.workpacks.Milestone;
 import br.gov.es.openpmo.model.workpacks.Workpack;
@@ -44,6 +45,7 @@ import br.gov.es.openpmo.service.workpack.WorkpackPermissionVerifier;
 import br.gov.es.openpmo.service.workpack.WorkpackService;
 import br.gov.es.openpmo.utils.ApplicationMessage;
 import br.gov.es.openpmo.utils.ResponseHandler;
+import br.gov.es.openpmo.utils.SelectionPossibleValues;
 import io.swagger.annotations.Api;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -531,6 +533,11 @@ public class WorkpackController {
 
       if (statusProperty != null) {
         itemDetail.setStatusProperties(statusProperty.getValue().toString());
+        if (statusProperty instanceof Selection && ((Selection) statusProperty).getDriver() != null) {
+          itemDetail.setStatusOptions(
+            SelectionPossibleValues.split(((Selection) statusProperty).getDriver().getPossibleValues())
+          );
+        }
       }
     }
 

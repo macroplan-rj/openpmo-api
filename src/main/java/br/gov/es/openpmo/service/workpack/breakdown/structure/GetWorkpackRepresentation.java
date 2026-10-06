@@ -24,6 +24,7 @@ import br.gov.es.openpmo.dto.workpack.breakdown.structure.JournalInformationDto;
 import br.gov.es.openpmo.dto.workpack.breakdown.structure.ScheduleMeasureUnit;
 import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackBreakdownClassificationDto;
 import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackRepresentation;
+import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackStatusInformation;
 import br.gov.es.openpmo.model.office.UnitMeasure;
 import br.gov.es.openpmo.model.properties.Property;
 import br.gov.es.openpmo.model.properties.UnitSelection;
@@ -35,6 +36,7 @@ import br.gov.es.openpmo.repository.BaselineRepository;
 import br.gov.es.openpmo.repository.WorkpackRepository;
 import br.gov.es.openpmo.service.baselines.GetBaselineUpdatesService;
 import br.gov.es.openpmo.service.dashboards.v2.ASyncDashboardService;
+import br.gov.es.openpmo.utils.SelectionPossibleValues;
 
 @Component
 public class GetWorkpackRepresentation {
@@ -142,19 +144,40 @@ public class GetWorkpackRepresentation {
       }
     }
     
-    if ("Project".equals(workpackType)) {
-      String projectStatus = workpackRepository.getProjectStatusByProjectId(workpackId);
-      if (projectStatus != null) {
-        workpackRepresentation.setProjectStatus(projectStatus);
-      }
-    } else if ("Deliverable".equals(workpackType)) {
-      String deliverableStatus = workpackRepository.getDeliverableStatusByDeliverableId(workpackId);
-      if (deliverableStatus != null) {
-        workpackRepresentation.setDeliverableStatus(deliverableStatus);
-      }
+    if ("Project".equals(workpackType) || "Deliverable".equals(workpackType)) {
+      final WorkpackStatusInformation statusInformation = this.workpackRepository.getWorkpackStatusInformation(
+        workpackId,
+        statusPropertyModelName(workpackType)
+      );
+      applyStatusInformation(workpackRepresentation, workpackType, statusInformation);
     }
 
     return workpackRepresentation;
+  }
+
+  /** Projeto usa a propriedade 'Status'; entrega, 'Situação'. */
+  static String statusPropertyModelName(final String workpackType) {
+    return "Deliverable".equals(workpackType) ? "Situação" : "Status";
+  }
+
+  static void applyStatusInformation(
+    final WorkpackRepresentation workpackRepresentation,
+    final String workpackType,
+    final WorkpackStatusInformation statusInformation
+  ) {
+    if (statusInformation == null) {
+      return;
+    }
+    final String status = statusInformation.getStatus();
+    if (status != null) {
+      if ("Project".equals(workpackType)) {
+        workpackRepresentation.setProjectStatus(status);
+      } else {
+        workpackRepresentation.setDeliverableStatus(status);
+      }
+    }
+    workpackRepresentation.setStatusOptions(SelectionPossibleValues.split(statusInformation.getPossibleValues()));
+    workpackRepresentation.setPendingBaseline(statusInformation.isPendingBaseline());
   }
 
   private MilestoneResultDto getMilestorneResultDto(
