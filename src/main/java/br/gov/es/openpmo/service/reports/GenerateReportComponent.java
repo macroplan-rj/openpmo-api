@@ -16,6 +16,7 @@ import br.gov.es.openpmo.repository.PropertyModelRepository;
 import br.gov.es.openpmo.repository.ReportDesignRepository;
 import br.gov.es.openpmo.utils.ApplicationMessage;
 import br.gov.es.openpmo.utils.JasperUtils;
+import br.gov.es.openpmo.utils.SelectionValues;
 import net.sf.jasperreports.engine.JasperReport;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -182,8 +183,7 @@ public class GenerateReportComponent {
         if (parameter.getValue() == null) {
           return;
         }
-        final List<String> values = Arrays.stream(parameter.getValue().split(","))
-          .collect(Collectors.toList());
+        final List<String> values = SelectionValues.split(parameter.getValue());
         if (selectionModel.isRequired() && values.isEmpty()) {
           throw new NegocioException(PROPERTY_VALUE_NOT_NULL + "$" + selectionModel.getLabel());
         }
@@ -400,10 +400,7 @@ public class GenerateReportComponent {
         return param.getSelectedValue();
       case "Selection": {
         if (StringUtils.isEmpty(param.getValue())) return null;
-        final String[] split = param.getValue().split(",");
-        final StringJoiner joiner = new StringJoiner("','", "'", "'");
-        Arrays.stream(split).forEach(joiner::add);
-        return joiner.toString();
+        return SelectionValues.toQuotedList(param.getValue());
       }
       default:
         if (Objects.isNull(param.getValue())) return null;

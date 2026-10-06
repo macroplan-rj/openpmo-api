@@ -4,11 +4,11 @@ import br.gov.es.openpmo.enumerator.GeneralOperatorsEnum;
 import br.gov.es.openpmo.model.filter.CustomFilter;
 import br.gov.es.openpmo.model.filter.LogicOperatorEnum;
 import br.gov.es.openpmo.model.filter.Rules;
+import br.gov.es.openpmo.utils.SelectionValues;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.neo4j.ogm.session.Session;
 import org.springframework.util.StringUtils;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
@@ -96,12 +96,18 @@ public abstract class AbstractCustomFilterBuilder {
   }
 
   private Object getValue(final Rules rule) {
-    final String value = rule.getValue();
+    return toParamValue(rule.getValue());
+  }
 
-    if(value.contains(",")) {
+  /**
+   * SD #10628: a lista de opcoes da Selecao e separada por ';' (a virgula pode fazer parte do texto
+   * da opcao), entao so ';' quebra o valor da regra; uma virgula fica dentro do valor.
+   */
+  static Object toParamValue(final String value) {
+    if(value.contains(SelectionValues.SEPARATOR)) {
       final StringBuilder stringBuilder = new StringBuilder();
 
-      final Iterator<String> iterator = Arrays.stream(value.split(",")).iterator();
+      final Iterator<String> iterator = SelectionValues.split(value).iterator();
 
       while(iterator.hasNext()) {
         final String next = iterator.next();
