@@ -114,7 +114,8 @@ public interface ScheduleRepository extends Neo4jRepository<Schedule, Long> {
     "OPTIONAL MATCH (w)<-[:FEATURES]-(schedule:Schedule) " +
     "OPTIONAL MATCH (schedule)<-[i:IS_SNAPSHOT_OF]-(snapshot:Schedule)-[c:COMPOSES]->(b:Baseline{active:true}) " +
     "RETURN id(schedule) as id, id(snapshot) as idSnapshot,  schedule.end as end, schedule.start as start " +
-    ", snapshot.end as baselineEnd, snapshot.start as baselineStart, id(w) as idWorkpack "
+    ", snapshot.end as baselineEnd, snapshot.start as baselineStart, id(w) as idWorkpack " +
+    ", coalesce(schedule.distribution, 'SIGMOIDAL') as distribution "
   )
   ScheduleDto findScheduleBaseInfoByWorkpackId(Long idWorkpack);
 

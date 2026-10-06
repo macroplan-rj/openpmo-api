@@ -1,5 +1,6 @@
 package br.gov.es.openpmo.model.schedule;
 
+import br.gov.es.openpmo.dto.schedule.DistributionStrategy;
 import br.gov.es.openpmo.enumerator.CategoryEnum;
 import br.gov.es.openpmo.model.Entity;
 import br.gov.es.openpmo.model.baselines.Baseline;
@@ -39,6 +40,8 @@ public class Schedule extends Entity implements Snapshotable<Schedule> {
   private Set<Step> steps;
 
   private CategoryEnum category;
+
+  private DistributionStrategy distribution;
 
   public Schedule() {
   }
@@ -114,6 +117,22 @@ public class Schedule extends Entity implements Snapshotable<Schedule> {
 
   public void setEnd(final LocalDate end) {
     this.end = end;
+  }
+
+  public DistributionStrategy getDistribution() {
+    return this.distribution;
+  }
+
+  public void setDistribution(final DistributionStrategy distribution) {
+    this.distribution = distribution;
+  }
+
+  /**
+   * Cronogramas anteriores ao SD-10605 nao gravavam a distribuicao; a tela de criacao usa SIGMOIDAL por padrao.
+   */
+  @Transient
+  public DistributionStrategy getDistributionOrDefault() {
+    return this.distribution == null ? DistributionStrategy.SIGMOIDAL : this.distribution;
   }
 
   public IsScheduleSnapshotOf getMaster() {

@@ -132,6 +132,7 @@ public class ApplicationMessage {
   public static final String WORKPACK_PASTE_ERROR = "workpack.paste.error";
   public static final String SCHEDULE_IS_NULL = "schedule.is.null";
   public static final String SCHEDULE_HAS_ACTIVE_BASELINE = "schedule.has.active.baseline";
+  public static final String SCHEDULE_UPDATE_REMOVES_BASELINE_STEP = "schedule.update.removes.baseline.step";
   public static final String JOURNAL_NOT_FOUND = "journal.not.found";
   public static final String BASELINE_UNDEFINED_STATUS = "baseline.undefined.status";
   public static final String RISK_UNDEFINED_STATUS = "risk.undefined.status";

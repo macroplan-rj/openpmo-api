@@ -6,7 +6,9 @@ import br.gov.es.openpmo.dto.schedule.ConsumesDto;
 import br.gov.es.openpmo.dto.schedule.DistributionStrategy;
 import br.gov.es.openpmo.dto.schedule.GroupStepDto;
 import br.gov.es.openpmo.dto.schedule.ScheduleDto;
+import br.gov.es.openpmo.dto.schedule.CostSchedule;
 import br.gov.es.openpmo.dto.schedule.ScheduleParamDto;
+import br.gov.es.openpmo.dto.schedule.ScheduleUpdateParamDto;
 import br.gov.es.openpmo.dto.schedule.StepAggregateDto;
 import br.gov.es.openpmo.dto.schedule.StepDto;
 import br.gov.es.openpmo.exception.NegocioException;
@@ -21,10 +23,12 @@ import br.gov.es.openpmo.repository.CostAccountRepository;
 import br.gov.es.openpmo.repository.ScheduleRepository;
 import br.gov.es.openpmo.repository.StepRepository;
 import br.gov.es.openpmo.service.workpack.WorkpackService;
+import static br.gov.es.openpmo.utils.ApplicationMessage.COST_ACCOUNT_NOT_FOUND;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_ALREADY_EXISTS;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_HAS_ACTIVE_BASELINE;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_NOT_FOUND;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_START_DATE_AFTER_DATE_ERROR;
+import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_UPDATE_REMOVES_BASELINE_STEP;
 import br.gov.es.openpmo.utils.MapPair;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -68,6 +72,8 @@ public class ScheduleService {
 
   private final BaselineRepository baselineRepository;
 
+  private final RedistributeScheduleSteps redistributeScheduleSteps;
+
   @Autowired
   public ScheduleService(
     final StepRepository stepRepository,
@@ -78,7 +84,8 @@ public class ScheduleService {
     final UpdateStatusService updateStatusService,
     final GetCostAccountGroupedByDistributedParts getCostAccountGroupedByDistributedParts,
     final GetUnitMeasureScaleByWorkpack getUnitMeasureScaleByWorkpack,
-    final BaselineRepository baselineRepository
+    final BaselineRepository baselineRepository,
+    final RedistributeScheduleSteps redistributeScheduleSteps
   ) {
     this.stepRepository = stepRepository;
     this.scheduleRepository = scheduleRepository;
@@ -89,6 +96,7 @@ public class ScheduleService {
     this.getCostAccountGroupedByDistributedParts = getCostAccountGroupedByDistributedParts;
     this.getUnitMeasureScaleByWorkpack = getUnitMeasureScaleByWorkpack;
     this.baselineRepository = baselineRepository;
+    this.redistributeScheduleSteps = redistributeScheduleSteps;
   }
 
   private static void setScheduleDtoWorkpack(
@@ -247,7 +255,7 @@ public class ScheduleService {
     step.setPeriodFromStart(currentMonth - 1);
     step.setActualWork(BigDecimal.ZERO);
 
-    if (currentMonth < actualWorkMonths && actualWorkMonths > 0) {
+    if (currentMonth <= actualWorkMonths) {
       setActualWork(
         currentMonth,
         scheduleParamDto,
@@ -292,7 +300,7 @@ public class ScheduleService {
         currentMonth,
         costAccount,
         pair,
-        currentMonth < actualWorkMonths
+        currentMonth <= actualWorkMonths
       );
     }
   }
@@ -512,6 +520,7 @@ public class ScheduleService {
       schedule,
       scheduleDto
     );
+    scheduleDto.setDistribution(schedule.getDistributionOrDefault().name());
 
     return scheduleDto;
   }
@@ -684,6 +693,7 @@ public class ScheduleService {
       scheduleParamDto,
       schedule
     );
+    schedule.setDistribution(scheduleParamDto.getDistribution());
 
     this.setScheduleSteps(
       scheduleParamDto,
@@ -768,6 +778,65 @@ public class ScheduleService {
 
   private Workpack findWorkpackById(final ScheduleParamDto scheduleParamDto) {
     return this.workpackService.findById(scheduleParamDto.getIdWorkpack());
+  }
+
+  /**
+   * Edita fim, totais e distribuicao de um cronograma existente, redistribuindo os steps (SD-10605).
+   * O inicio e os snapshots de baseline (valores "Estimado" com baseline ativa) nunca sao alterados.
+   */
+  @Transactional
+  public Schedule update(
+    final Long idSchedule,
+    final ScheduleUpdateParamDto paramDto
+  ) {
+    final Schedule schedule = this.findById(idSchedule);
+
+    final Map<Long, RedistributeScheduleSteps.CostTarget> costTargets = RedistributeScheduleSteps.currentCostTotals(schedule);
+    for (final CostSchedule cost : Optional.ofNullable(paramDto.getCosts()).orElse(Collections.emptySet())) {
+      if (cost.getIdCostAccount() == null) {
+        continue;
+      }
+      final RedistributeScheduleSteps.CostTarget target = costTargets.computeIfAbsent(
+        cost.getIdCostAccount(),
+        id -> new RedistributeScheduleSteps.CostTarget(this.findCostAccountById(id), null, null)
+      );
+      if (cost.getPlannedCost() != null) {
+        target.setPlannedCost(cost.getPlannedCost());
+      }
+      if (cost.getActualCost() != null) {
+        target.setActualCost(cost.getActualCost());
+      }
+    }
+
+    final RedistributeScheduleSteps.Result result = this.redistributeScheduleSteps.execute(
+      schedule,
+      paramDto.getEnd(),
+      paramDto.getPlannedWork(),
+      paramDto.getActualWork(),
+      paramDto.getDistribution(),
+      costTargets.values(),
+      this.getUnitMeasureScaleByWorkpack.execute(schedule.getIdWorkpack()),
+      LocalDate.now()
+    );
+
+    final List<Step> removed = result.getRemoved();
+    if (!removed.isEmpty()) {
+      final List<Long> removedIds = removed.stream().map(Step::getId).filter(Objects::nonNull).collect(Collectors.toList());
+      if (!removedIds.isEmpty() && this.stepRepository.anyHasSnapshotInActiveOrProposedBaseline(removedIds)) {
+        throw new NegocioException(SCHEDULE_UPDATE_REMOVES_BASELINE_STEP);
+      }
+      this.stepRepository.deleteAll(removed);
+    }
+
+    final Schedule savedSchedule = this.scheduleRepository.save(schedule);
+    final List<Deliverable> deliverables = this.updateStatusService.getDeliverablesByScheduleId(savedSchedule.getId());
+    this.updateStatusService.update(deliverables);
+    return savedSchedule;
+  }
+
+  private CostAccount findCostAccountById(final Long idCostAccount) {
+    return this.costAccountRepository.findById(idCostAccount)
+      .orElseThrow(() -> new NegocioException(COST_ACCOUNT_NOT_FOUND));
   }
 
   public void delete(final Long idSchedule) {

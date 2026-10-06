@@ -5,6 +5,7 @@ import br.gov.es.openpmo.dto.EntityDto;
 import br.gov.es.openpmo.dto.ResponseBase;
 import br.gov.es.openpmo.dto.schedule.ScheduleDto;
 import br.gov.es.openpmo.dto.schedule.ScheduleParamDto;
+import br.gov.es.openpmo.dto.schedule.ScheduleUpdateParamDto;
 import br.gov.es.openpmo.model.schedule.Schedule;
 import br.gov.es.openpmo.service.permissions.canaccess.ICanAccessService;
 import br.gov.es.openpmo.service.schedule.ScheduleService;
@@ -95,6 +96,21 @@ public class ScheduleController {
       authorization
     );
     final Schedule schedule = this.scheduleService.save(scheduleParamDto);
+    return ResponseEntity.ok(ResponseBase.of(new EntityDto(schedule.getId())));
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<ResponseBase<EntityDto>> update(
+    @PathVariable final Long id,
+    @Valid @RequestBody final ScheduleUpdateParamDto scheduleUpdateParamDto,
+    @RequestHeader(name = "Authorization") final String authorization
+  ) {
+    final Schedule current = this.scheduleService.findById(id);
+    this.canAccessService.ensureCanEditResource(
+      current.getIdWorkpack(),
+      authorization
+    );
+    final Schedule schedule = this.scheduleService.update(id, scheduleUpdateParamDto);
     return ResponseEntity.ok(ResponseBase.of(new EntityDto(schedule.getId())));
   }
 

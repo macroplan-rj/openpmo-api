@@ -25,6 +25,7 @@ public class ScheduleDto {
   private BigDecimal baselineCost = BigDecimal.ZERO;
   private List<GroupStepDto> groupStep;
   private Long idWorkpack;
+  private String distribution;
 
   @JsonIgnore
   private List<StepAggregateDto> steps;
@@ -40,6 +41,7 @@ public class ScheduleDto {
     this.end = schedule.getEnd();
     this.start = schedule.getStart();
     this.idWorkpack = schedule.getIdWorkpack();
+    this.distribution = schedule.getDistributionOrDefault().name();
   }
 
 
@@ -195,6 +197,14 @@ public class ScheduleDto {
 
   public void setBaselineCost(final BigDecimal baselineCost) {
     this.baselineCost = baselineCost;
+  }
+
+  public String getDistribution() {
+    return this.distribution;
+  }
+
+  public void setDistribution(final String distribution) {
+    this.distribution = distribution;
   }
 
   public Long getIdSnapshot() {
