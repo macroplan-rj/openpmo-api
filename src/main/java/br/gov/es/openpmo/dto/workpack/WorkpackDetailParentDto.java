@@ -94,6 +94,9 @@ public abstract class WorkpackDetailParentDto {
 
   private String statusProperty;
 
+  /** Opcoes da propriedade de situacao, na ordem do modelo ("Tipos de situacao" no card). */
+  private List<String> statusOptions;
+
   @JsonProperty("canUseCCB")
   private boolean canUseCCB;
 
@@ -355,6 +358,14 @@ public abstract class WorkpackDetailParentDto {
 
   public void setStatusProperties(String statusProperty) {
     this.statusProperty = statusProperty;
+  }
+
+  public List<String> getStatusOptions() {
+    return this.statusOptions;
+  }
+
+  public void setStatusOptions(List<String> statusOptions) {
+    this.statusOptions = statusOptions;
   }
 
   public boolean isCanUseCCB() {

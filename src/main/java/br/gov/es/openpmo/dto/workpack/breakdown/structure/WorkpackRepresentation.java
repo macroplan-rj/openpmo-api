@@ -8,6 +8,8 @@ import br.gov.es.openpmo.dto.dashboards.RiskResultDto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import java.util.List;
+
 public class WorkpackRepresentation {
   private Long idWorkpack;
 
@@ -43,6 +45,14 @@ public class WorkpackRepresentation {
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String deliverableStatus;
+
+  /** Opcoes da propriedade de situacao, na ordem do modelo ("Tipos de situacao"). */
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  private List<String> statusOptions;
+
+  /** Ha linha de base proposta aguardando aprovacao ("Em aprovacao"). */
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private Boolean pendingBaseline;
 
   /* Getters and Setters */
 
@@ -135,5 +145,19 @@ public class WorkpackRepresentation {
   }
   public void setDeliverableStatus(String deliverableStatus) {
     this.deliverableStatus = deliverableStatus;
+  }
+
+  public List<String> getStatusOptions() {
+    return statusOptions;
+  }
+  public void setStatusOptions(List<String> statusOptions) {
+    this.statusOptions = statusOptions;
+  }
+
+  public Boolean getPendingBaseline() {
+    return pendingBaseline;
+  }
+  public void setPendingBaseline(Boolean pendingBaseline) {
+    this.pendingBaseline = pendingBaseline;
   }
 }

@@ -6,6 +6,7 @@ import br.gov.es.openpmo.dto.menu.WorkpackResultDto;
 import br.gov.es.openpmo.dto.universalSearch.UniversalSearchItemQueryResult;
 import br.gov.es.openpmo.dto.workpack.DeliveryForecastDto;
 import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackBreakdownClassificationDto;
+import br.gov.es.openpmo.dto.workpack.breakdown.structure.WorkpackStatusInformation;
 import br.gov.es.openpmo.model.baselines.Baseline;
 import br.gov.es.openpmo.model.office.plan.Plan;
 import br.gov.es.openpmo.model.workpacks.Deliverable;
@@ -1027,15 +1028,19 @@ public interface WorkpackRepository extends Neo4jRepository<Workpack, Long>, Cus
       "RETURN count(child)")
   public Long countTypeByWorkpack(Long workpackId, String type);
 
-  @Query("MATCH (p:Project)<-[:FEATURES]-(pr:Property)-[:IS_DRIVEN_BY]->(:PropertyModel { name: 'Status' })\n" +
-      "WHERE ID(p) = $idProject\n" +
-      "RETURN pr.value")
-  public String getProjectStatusByProjectId(Long idProject);
-
-  @Query("MATCH (d:Deliverable)<-[:FEATURES]-(pr:Property)-[:IS_DRIVEN_BY]->(:PropertyModel { name: 'Situação' })\n" +
-      "WHERE ID(d) = $idDeliverable\n" +
-      "RETURN pr.value")
-  public String getDeliverableStatusByDeliverableId(Long idDeliverable);
+  /**
+   * Situacao do workpack para os tooltips da EAP (SD-10604), numa ida so ao banco:
+   * valor atual, possibleValues do SelectionModel e baseline pendente. Baseline pendente =
+   * linha de base PROPOSED do proprio workpack (projeto) ou que contenha um snapshot dele
+   * (entrega dentro de uma linha de base do projeto aguardando aprovacao).
+   */
+  @Query("MATCH (w:Workpack) WHERE ID(w) = $idWorkpack\n" +
+      "OPTIONAL MATCH (w)<-[:FEATURES]-(pr:Property)-[:IS_DRIVEN_BY]->(pm:PropertyModel { name: $propertyModelName })\n" +
+      "WITH w, head(collect(pr.value)) AS status, head(collect(pm.possibleValues)) AS possibleValues\n" +
+      "RETURN status, possibleValues,\n" +
+      "  exists((w)-[:IS_BASELINED_BY]->(:Baseline { status: 'PROPOSED' }))\n" +
+      "  OR exists((w)<-[:IS_SNAPSHOT_OF]-(:Workpack)-[:COMPOSES]->(:Baseline { status: 'PROPOSED' })) AS pendingBaseline")
+  WorkpackStatusInformation getWorkpackStatusInformation(Long idWorkpack, String propertyModelName);
 
   @Query("MATCH p=(wp:Workpack)-[:IS_INSTANCE_BY]->(wpm:WorkpackModel)\n" +
       "WHERE id(wp) = $workpackId\n" +
