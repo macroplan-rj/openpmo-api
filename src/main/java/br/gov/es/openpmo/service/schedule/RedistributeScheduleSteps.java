@@ -26,11 +26,12 @@ import java.util.function.Function;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_START_DATE_AFTER_DATE_ERROR;
 
 /**
- * Recalcula os steps de um cronograma existente a partir de um novo fim, novos totais e distribuicao (SD-10605).
+ * Recalcula os steps de um cronograma existente a partir de novo inicio, novo fim, novos totais e distribuicao (SD-10605).
  * <p>
  * Regras:
  * <ul>
- *   <li>O inicio nao muda; os meses vao do mes do inicio ao mes do novo fim.</li>
+ *   <li>Os meses vao do mes do inicio ao mes do novo fim. Se o inicio muda, cada step mantem seu mes no calendario
+ *   (periodFromStart e deslocado); quem sabe se o inicio pode mudar e o chamador (nao pode com baseline).</li>
  *   <li>Steps existentes sao atualizados no lugar (mantem id e, portanto, o vinculo com snapshots de baseline);
  *   meses novos ganham steps novos; meses que saem do intervalo sao devolvidos em {@link Result#getRemoved()}.</li>
  *   <li>Cada serie (Un planejado, Un realizado, e por conta de custo $ planejado e $ realizado) so e redistribuida se
@@ -137,7 +138,20 @@ public class RedistributeScheduleSteps {
     final int scale,
     final LocalDate today
   ) {
-    final LocalDate start = schedule.getStart();
+    return this.execute(schedule, schedule.getStart(), newEnd, plannedWork, actualWork, distribution, costTargets, scale, today);
+  }
+
+  public Result execute(
+    final Schedule schedule,
+    final LocalDate start,
+    final LocalDate newEnd,
+    final BigDecimal plannedWork,
+    final BigDecimal actualWork,
+    final DistributionStrategy distribution,
+    final Collection<CostTarget> costTargets,
+    final int scale,
+    final LocalDate today
+  ) {
     if (newEnd.isBefore(start)) {
       throw new NegocioException(SCHEDULE_START_DATE_AFTER_DATE_ERROR);
     }
@@ -147,6 +161,14 @@ public class RedistributeScheduleSteps {
 
     final List<Step> existing = new ArrayList<>(Optional.ofNullable(schedule.getSteps()).orElse(Collections.emptySet()));
     existing.sort(Comparator.comparing(Step::getPeriodFromStart));
+
+    // Inicio mudou de mes: o periodo e contado a partir do inicio, entao desloca para cada step ficar no mesmo mes.
+    final long shift = monthsBetween(start, schedule.getStart());
+    if (shift != 0L) {
+      existing.stream()
+        .filter(step -> step.getPeriodFromStart() != null)
+        .forEach(step -> step.setPeriodFromStart(step.getPeriodFromStart() + shift));
+    }
 
     final Map<Long, Step> byPeriod = new HashMap<>();
     final List<Step> removed = new ArrayList<>();
@@ -235,6 +257,7 @@ public class RedistributeScheduleSteps {
     for (final Step step : steps) {
       step.setConsumes(new HashSet<>(step.getConsumes()));
     }
+    schedule.setStart(start);
     schedule.setEnd(newEnd);
     schedule.setDistribution(distribution);
     schedule.setSteps(new HashSet<>(steps));

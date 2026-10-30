@@ -29,6 +29,7 @@ import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_HAS_ACTIVE_BAS
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_NOT_FOUND;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_START_DATE_AFTER_DATE_ERROR;
 import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_UPDATE_REMOVES_BASELINE_STEP;
+import static br.gov.es.openpmo.utils.ApplicationMessage.SCHEDULE_UPDATE_START_HAS_BASELINE;
 import br.gov.es.openpmo.utils.MapPair;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -781,8 +782,8 @@ public class ScheduleService {
   }
 
   /**
-   * Edita fim, totais e distribuicao de um cronograma existente, redistribuindo os steps (SD-10605).
-   * O inicio e os snapshots de baseline (valores "Estimado" com baseline ativa) nunca sao alterados.
+   * Edita inicio, fim, totais e distribuicao de um cronograma existente, redistribuindo os steps (SD-10605).
+   * O inicio so muda sem baseline; snapshots de baseline (valores "Estimado") nunca sao alterados.
    */
   @Transactional
   public Schedule update(
@@ -790,6 +791,15 @@ public class ScheduleService {
     final ScheduleUpdateParamDto paramDto
   ) {
     final Schedule schedule = this.findById(idSchedule);
+
+    final LocalDate start = paramDto.getStart() == null ? schedule.getStart() : paramDto.getStart();
+    if (!start.equals(schedule.getStart())) {
+      final List<Long> stepIds = Optional.ofNullable(schedule.getSteps()).orElse(Collections.emptySet()).stream()
+        .map(Step::getId).filter(Objects::nonNull).collect(Collectors.toList());
+      if (!stepIds.isEmpty() && this.stepRepository.anyHasSnapshotInActiveOrProposedBaseline(stepIds)) {
+        throw new NegocioException(SCHEDULE_UPDATE_START_HAS_BASELINE);
+      }
+    }
 
     final Map<Long, RedistributeScheduleSteps.CostTarget> costTargets = RedistributeScheduleSteps.currentCostTotals(schedule);
     for (final CostSchedule cost : Optional.ofNullable(paramDto.getCosts()).orElse(Collections.emptySet())) {
@@ -810,6 +820,7 @@ public class ScheduleService {
 
     final RedistributeScheduleSteps.Result result = this.redistributeScheduleSteps.execute(
       schedule,
+      start,
       paramDto.getEnd(),
       paramDto.getPlannedWork(),
       paramDto.getActualWork(),
