@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
  *   GET /dynamic-selection/options?provider=&parent=5001,5002 — para o formulario (cascata)
  *   GET /dynamic-selection/resolve?provider=&codes=1496,1640  — codigo -> rotulo
  *   GET /dynamic-selection/lists[/{key}/items]               — tela de cadastro das listas
+ *   POST /dynamic-selection/lists?id-office=                 — nova lista (nome e lista de que depende)
  *   POST|PUT|DELETE /dynamic-selection/lists/{key}/items[/{code}]?id-office= — itens (SD #10548 / #10607)
  * Leitura exige apenas usuario autenticado, como as demais rotas; escrita exige permissao de edicao
  * no escritorio de onde a tela e aberta, como Organizacoes.
@@ -78,6 +79,16 @@ public class DynamicSelectionController {
   @GetMapping("/lists")
   public ResponseEntity<ResponseBase<List<DynamicSelectionListService.ListSummary>>> lists() {
     return ResponseEntity.ok(ResponseBase.of(this.listService.lists()));
+  }
+
+  @PostMapping("/lists")
+  public ResponseEntity<ResponseBase<DynamicSelectionListService.ListSummary>> createList(
+    @RequestParam("id-office") final Long idOffice,
+    @RequestBody final DynamicSelectionListService.ListRequest request,
+    @Authorization final String authorization
+  ) {
+    this.canAccessService.ensureCanEditResource(idOffice, authorization);
+    return ResponseEntity.ok(ResponseBase.of(this.listService.createList(request)));
   }
 
   @GetMapping("/lists/{key}/items")

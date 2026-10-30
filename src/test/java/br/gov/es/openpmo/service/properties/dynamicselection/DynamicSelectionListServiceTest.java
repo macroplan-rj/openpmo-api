@@ -139,4 +139,41 @@ public class DynamicSelectionListServiceTest {
     verify(this.itens).delete(any(DynamicSelectionSource.class));
   }
 
+  private static DynamicSelectionListService.ListRequest novaLista(final String label, final String pai) {
+    final DynamicSelectionListService.ListRequest r = new DynamicSelectionListService.ListRequest();
+    r.setLabel(label);
+    r.setDependsOnKey(pai);
+    return r;
+  }
+
+  private void comListas() {
+    when(this.listas.findAllOrdered()).thenReturn(java.util.Arrays.asList(lista("pelp.objetivo", null), lista("lista.metas", "pelp.objetivo")));
+    when(this.listas.save(any(DynamicSelectionList.class))).thenAnswer(inv -> inv.getArgument(0));
+  }
+
+  @Test
+  public void criaListaComChaveGeradaSemAcentoEDependencia() {
+    this.comListas();
+    final DynamicSelectionListService.ListSummary nova = this.service.createList(novaLista(" Estratégias de Desenvolvimento ", "pelp.objetivo"));
+    assertEquals("lista.estrategias-de-desenvolvimento", nova.getKey());
+    assertEquals("Estratégias de Desenvolvimento", nova.getLabel());
+    assertEquals("pelp.objetivo", nova.getDependsOnKey());
+    assertEquals(0L, nova.getItems());
+  }
+
+  @Test
+  public void chaveJaUsadaGanhaSufixo() {
+    this.comListas();
+    assertEquals("lista.metas-2", this.service.createList(novaLista("Metas!", null)).getKey());
+  }
+
+  @Test
+  public void recusaNomeVazioRepetidoOuPaiInexistente() {
+    this.comListas();
+    assertRecusa(DynamicSelectionListService.LIST_LABEL_REQUIRED, () -> this.service.createList(novaLista("  ", null)));
+    assertRecusa(DynamicSelectionListService.LIST_DUPLICATED_LABEL, () -> this.service.createList(novaLista("PELP.OBJETIVO", null)));
+    assertRecusa(DynamicSelectionListService.LIST_PARENT_NOT_FOUND, () -> this.service.createList(novaLista("Nova", "nao.existe")));
+    verify(this.listas, never()).save(any(DynamicSelectionList.class));
+  }
+
 }
