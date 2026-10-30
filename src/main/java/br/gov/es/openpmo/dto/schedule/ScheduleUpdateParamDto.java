@@ -8,9 +8,12 @@ import java.time.LocalDate;
 import java.util.Set;
 
 /**
- * Corpo do PUT /schedules/{id}. O inicio do cronograma nao e editavel; valores nulos (actualWork e custos) mantem o total atual.
+ * Corpo do PUT /schedules/{id}. Valores nulos (start, actualWork e custos) mantem o valor atual.
+ * O inicio so pode mudar em cronograma sem linha de base.
  */
 public class ScheduleUpdateParamDto {
+
+  private LocalDate start;
 
   @NotNull
   private LocalDate end;
@@ -27,6 +30,14 @@ public class ScheduleUpdateParamDto {
 
   @Valid
   private Set<CostSchedule> costs;
+
+  public LocalDate getStart() {
+    return this.start;
+  }
+
+  public void setStart(final LocalDate start) {
+    this.start = start;
+  }
 
   public LocalDate getEnd() {
     return this.end;

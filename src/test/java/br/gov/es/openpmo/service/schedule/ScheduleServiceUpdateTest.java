@@ -165,4 +165,40 @@ public class ScheduleServiceUpdateTest {
     verify(this.scheduleRepository, never()).save(any(Schedule.class));
   }
 
+  @Test
+  public void changingStartWithBaselineIsRefusedAndNothingIsPersisted() {
+    when(this.stepRepository.anyHasSnapshotInActiveOrProposedBaseline(anyList())).thenReturn(true);
+    final ScheduleUpdateParamDto dto = param(LocalDate.of(2026, 9, 30));
+    dto.setStart(LocalDate.of(2026, 4, 1));
+
+    try {
+      this.service.update(1L, dto);
+      fail("esperava NegocioException");
+    } catch (final NegocioException e) {
+      assertEquals(ApplicationMessage.SCHEDULE_UPDATE_START_HAS_BASELINE, e.getMessage());
+    }
+    assertEquals(LocalDate.of(2026, 5, 1), this.schedule.getStart());
+    verify(this.scheduleRepository, never()).save(any(Schedule.class));
+  }
+
+  @Test
+  public void changingStartWithoutBaselineIsSaved() {
+    when(this.stepRepository.anyHasSnapshotInActiveOrProposedBaseline(anyList())).thenReturn(false);
+    final ScheduleUpdateParamDto dto = param(LocalDate.of(2026, 9, 30));
+    dto.setStart(LocalDate.of(2026, 4, 1));
+
+    final Schedule saved = this.service.update(1L, dto);
+
+    assertEquals(LocalDate.of(2026, 4, 1), saved.getStart());
+    assertEquals(6, saved.getSteps().size());
+  }
+
+  @Test
+  public void nullStartKeepsCurrentStart() {
+    final Schedule saved = this.service.update(1L, param(LocalDate.of(2026, 9, 30)));
+
+    assertEquals(LocalDate.of(2026, 5, 1), saved.getStart());
+    verify(this.stepRepository, never()).anyHasSnapshotInActiveOrProposedBaseline(anyList());
+  }
+
 }

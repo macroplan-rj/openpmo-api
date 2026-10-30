@@ -309,4 +309,64 @@ public class RedistributeScheduleStepsTest {
     assertEquals(0L, RedistributeScheduleSteps.actualMonths(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 9, 30), TODAY));
   }
 
+  private RedistributeScheduleSteps.Result runWithStart(final LocalDate start, final String actual) {
+    return this.redistribute.execute(
+      this.schedule,
+      start,
+      LocalDate.of(2026, 9, 30),
+      bd("120"),
+      bd(actual),
+      DistributionStrategy.SIGMOIDAL,
+      RedistributeScheduleSteps.currentCostTotals(this.schedule).values(),
+      SCALE,
+      TODAY
+    );
+  }
+
+  private Step stepWithId(final List<Step> steps, final long id) {
+    return steps.stream().filter(s -> Long.valueOf(id).equals(s.getId())).findFirst().get();
+  }
+
+  @Test
+  public void startEarlierKeepsEachStepInItsCalendarMonthAndCreatesTheNewMonth() {
+    final RedistributeScheduleSteps.Result result = this.runWithStart(LocalDate.of(2026, 4, 1), "44");
+
+    assertEquals(LocalDate.of(2026, 4, 1), this.schedule.getStart());
+    assertEquals(1, result.getCreated().size());
+    assertEquals(Long.valueOf(0L), result.getCreated().get(0).getPeriodFromStart());
+    assertEquals(0, result.getRemoved().size());
+    assertEquals(6, result.getSteps().size());
+    // o step de maio (id 100) era o periodo 0 e passa a ser o 1
+    assertEquals(Long.valueOf(1L), this.stepWithId(result.getSteps(), 100L).getPeriodFromStart());
+    // realizado nao mudou de total: fica nos mesmos meses
+    assertSame("20", this.stepWithId(result.getSteps(), 100L).getActualWork());
+    assertSame("44", sumActual(result.getSteps()));
+    assertSame("120", sumPlanned(result.getSteps()));
+    assertSame("1000", sumPlannedCost(result.getSteps(), 7L));
+  }
+
+  @Test
+  public void startLaterRemovesMonthsBeforeItAndKeepsTotals() {
+    final RedistributeScheduleSteps.Result result = this.runWithStart(LocalDate.of(2026, 6, 15), "44");
+
+    assertEquals(1, result.getRemoved().size());
+    assertEquals(Long.valueOf(100L), result.getRemoved().get(0).getId());
+    assertEquals(4, result.getSteps().size());
+    assertEquals(Long.valueOf(0L), this.stepWithId(result.getSteps(), 101L).getPeriodFromStart());
+    assertSame("120", sumPlanned(result.getSteps()));
+    assertSame("44", sumActual(result.getSteps()));
+    assertSame("1000", sumPlannedCost(result.getSteps(), 7L));
+    assertSame("300", sumActualCost(result.getSteps(), 7L));
+  }
+
+  @Test
+  public void startInSameMonthChangesOnlyTheDate() {
+    final RedistributeScheduleSteps.Result result = this.runWithStart(LocalDate.of(2026, 5, 20), "44");
+
+    assertEquals(LocalDate.of(2026, 5, 20), this.schedule.getStart());
+    assertEquals(0, result.getCreated().size());
+    assertEquals(0, result.getRemoved().size());
+    assertEquals(Long.valueOf(0L), this.stepWithId(result.getSteps(), 100L).getPeriodFromStart());
+  }
+
 }
