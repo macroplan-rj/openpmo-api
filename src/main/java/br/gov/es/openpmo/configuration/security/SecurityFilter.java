@@ -50,15 +50,35 @@ public class SecurityFilter extends OncePerRequestFilter {
   
   private final String authName;
 
+  private static final String PAINEL_KEY_HEADER = "X-Api-Key";
+
+  /** Token de servico do Painel Estrategico (app.painel.api-key); vazio desliga o acesso a /painel. */
+  private final String painelApiKey;
+
   @Autowired
   public SecurityFilter(
           final TokenService tokenService,
           final PersonService personService,
-          @Value("${app.login.server.idsvr.name}") final String authName
+          @Value("${app.login.server.idsvr.name}") final String authName,
+          @Value("${app.painel.api-key:}") final String painelApiKey
   ) {
     this.tokenService = tokenService;
     this.personService = personService;
     this.authName = authName;
+    this.painelApiKey = painelApiKey;
+  }
+
+  private static boolean isPainelUrl(final String url) {
+    return url.contains("/painel/");
+  }
+
+  private boolean isValidPainelKey(final String key) {
+    if(this.painelApiKey == null || this.painelApiKey.isEmpty() || key == null) {
+      return false;
+    }
+    return java.security.MessageDigest.isEqual(
+      this.painelApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+      key.getBytes(java.nio.charset.StandardCharsets.UTF_8));
   }
 
   private static boolean isPublicUrl(final String url) {
@@ -114,7 +134,17 @@ public class SecurityFilter extends OncePerRequestFilter {
     final boolean isSwaggerUrl = isSwaggerUrl(url);
     final boolean isPublicUrl = isPublicUrl(url);
 
-    if(isPublicUrl || isSwaggerUrl) {
+    if(isPainelUrl(url)) {
+      // Painel Estrategico (SD #10795-#10798): token de servico, nao o JWT do usuario.
+      if(!this.isValidPainelKey(request.getHeader(PAINEL_KEY_HEADER))) {
+        response.setStatus(HttpStatus.SC_UNAUTHORIZED);
+        response.setCharacterEncoding("utf-8");
+        response.getWriter().write(new JSONObject(new ErroDto(ApplicationMessage.INVALID_TOKEN)).toString());
+        return;
+      }
+      filterChain.doFilter(request, response);
+    }
+    else if(isPublicUrl || isSwaggerUrl) {
       filterChain.doFilter(request, response);
     }
     else {
