@@ -565,7 +565,8 @@ public class PainelService {
           p.dataTerminoPropriedade = data(v);
         } else if (NOMES_INSTITUICAO.contains(n) && p.instituicao == null) {
           p.instituicao = v;
-        } else if (n.startsWith("objetivo")) {
+        } else if (n.startsWith("objetivo(s) estrat") || n.startsWith("objetivos estrat") || n.startsWith("objetivos do pelp")) {
+          // so o campo do PELP (Selecao dinamica, codigos); "Objetivos" do grupo Justificativa e texto livre
           p.objetivos = separar(texto(prop.get("bruto")), ",");
         } else if (n.startsWith("estratégia") || n.startsWith("estrategia")) {
           p.estrategias = separar(v, ";");

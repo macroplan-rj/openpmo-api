@@ -42,6 +42,7 @@ public class PainelServiceTest {
     final List<Map<String, Object>> props = new ArrayList<>();
     props.add(prop("situação", "Execução"));
     props.add(prop("objetivo(s) estratégico(s) associado(s)", objetivos));
+    props.add(prop("objetivos", "Texto livre da justificativa, nao e o PELP"));
     props.add(prop("unidade gestora", instituicao));
     return m("id", id, "nome", nome, "areaId", areaId, "area", "Área " + areaId, "props", props,
       "partes", List.of(m("nome", "Ana", "papel", "gerente", "organizacao", false)));
