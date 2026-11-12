@@ -83,6 +83,7 @@ public class SecurityFilter extends OncePerRequestFilter {
 
   private static boolean isPublicUrl(final String url) {
     return url.endsWith("/refresh")
+           || url.endsWith("/signin/portal-token")
            || url.endsWith("/signout")
            || (url.contains("/avatar") && url.endsWith("/person"))
            || url.endsWith("/versions")
