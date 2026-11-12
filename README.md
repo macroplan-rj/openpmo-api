@@ -1,5 +1,27 @@
 # openpmo-api
 
+## Ambiente local (docker compose)
+
+Com o `openpmo-web` clonado ao lado deste repositório:
+
+```bash
+docker compose up -d --build
+```
+
+Sobe Neo4j (com dados fictícios), Keycloak, API e web. Acesse http://localhost:4200 e entre com o usuário
+`admin` e a senha `openpmo`. **Passo a passo completo, usuários de teste e problemas comuns:
+[docker/README.md](docker/README.md).**
+
+### Desenvolvendo a API
+
+| Tarefa | Comando (nesta pasta) |
+|---|---|
+| Recompilar e reiniciar a API depois de mudar o código | `docker compose up -d --build api` |
+| Acompanhar os logs | `docker compose logs -f api` |
+| Rodar os testes | `docker run --rm -v "$PWD":/w -v "$HOME/.gradle":/root/.gradle -w /w eclipse-temurin:11-jdk sh ./gradlew test` |
+| Rodar pela IDE | `docker compose stop api` e use `docker/api/application-local.properties` trocando `bolt://neo4j:7687` por `bolt://localhost:7687` e `http://keycloak:8080` por `http://localhost:8180` |
+| Consultar o banco | http://localhost:7474 (`neo4j` / `openpmo`) |
+
 O produto é composto por 3 componentes:
 
 * Frontend Angular, montado a partir do repositório no github

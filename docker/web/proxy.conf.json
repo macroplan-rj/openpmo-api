@@ -1,0 +1,8 @@
+{
+  "/openpmo": {
+    "target": "http://api:8080",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  }
+}
