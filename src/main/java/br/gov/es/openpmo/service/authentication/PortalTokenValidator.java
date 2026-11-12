@@ -1,5 +1,6 @@
 package br.gov.es.openpmo.service.authentication;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -28,6 +29,7 @@ public class PortalTokenValidator {
   private final String issuerUri;
   private volatile JwtDecoder decoder;
 
+  @Autowired
   public PortalTokenValidator(
     @Value("${app.portal.jwk-set-uri:${spring.security.oauth2.client.provider.keycloak.jwk-set-uri:}}") final String jwkSetUri,
     @Value("${app.portal.issuer-uri:${spring.security.oauth2.client.provider.idsvr.issuer-uri:}}") final String issuerUri
