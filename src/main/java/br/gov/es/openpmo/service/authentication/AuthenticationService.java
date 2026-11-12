@@ -15,6 +15,7 @@ import br.gov.es.pmo.identity_parser.pmo_base.service.ProviderService;
 import io.jsonwebtoken.Claims;
 import java.io.IOException;
 import java.util.*;
+import org.springframework.security.oauth2.jwt.Jwt;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -32,6 +33,8 @@ public class AuthenticationService {
   private static final String AUTHORIZATION = "Authorization";
 
   private static final String BEARER = "Bearer ";
+  /** registrationId do login OIDC; o SecurityFilter usa como authId da sessão. */
+  static final String PORTAL_RID = "idsvr";
 
   private final TokenService tokenService;
 
@@ -65,20 +68,36 @@ public class AuthenticationService {
   }
 
   public AcessoDto authenticate(final String token, final String rid) throws IOException {
-    
     final Object sub = providerService.getId();
-    final String email = providerService.getEmail();
-    final String key = Optional.ofNullable(sub).map(String::valueOf).orElse(email);
-    
+    return this.authenticateIdentity(
+      Optional.ofNullable(sub).map(String::valueOf).orElse(null),
+      providerService.getEmail(),
+      providerService.getNome(),
+      rid
+    );
+  }
+
+  /**
+   * Login a partir do access token do Keycloak entregue pelo portal SIPGR (handoff).
+   * Mesma regra do login OIDC: localiza a pessoa por sub ou e-mail; sem cadastro, só
+   * administradores configurados são criados. O authId é o do login OIDC ("idsvr").
+   */
+  public AcessoDto authenticatePortalToken(final Jwt jwt) {
+    final String name = Optional.ofNullable(jwt.getClaimAsString("name"))
+      .orElse(jwt.getClaimAsString("preferred_username"));
+    return this.authenticateIdentity(jwt.getSubject(), jwt.getClaimAsString("email"), name, PORTAL_RID);
+  }
+
+  private AcessoDto authenticateIdentity(final String sub, final String email, final String name, final String rid) {
+    final String key = Optional.ofNullable(sub).orElse(email);
+    if(key == null) {
+      return null;
+    }
     Optional<Person> person = this.personService.findByKey(key);
-    
-    if(!person.isPresent())
+    if(!person.isPresent() && email != null)
         person = this.personService.findByEmail(email);
-
-
     if (person.isPresent()) {
         final Person user = person.get();
-
         IsAuthenticatedBy authRelationship = user.getAuthentications().stream().findFirst().orElse(null);
         if (authRelationship != null) {
             this.isAuthenticatedByService.updateCredentials(
@@ -87,13 +106,12 @@ public class AuthenticationService {
               key
             );
         }
-
         final String authenticationToken = this.tokenService.generateToken(user, key, email, rid, TokenType.AUTHENTICATION);
         final String refreshToken = this.tokenService.generateToken(user, key, email, rid, TokenType.REFRESH);
         return new AcessoDto(authenticationToken, refreshToken);
     }
-    if (this.administrators.contains(email)) {
-      final Person user = this.createPerson();
+    if (email != null && this.administrators.contains(email)) {
+      final Person user = this.createPerson(key, email, name);
       final String authenticationToken = this.tokenService.generateToken(user, key, email, rid, TokenType.AUTHENTICATION);
       final String refreshToken = this.tokenService.generateToken(user, key, email, rid, TokenType.REFRESH);
       return new AcessoDto(authenticationToken, refreshToken);
@@ -101,25 +119,18 @@ public class AuthenticationService {
     return null;
   }
 
-  private Person createPerson() {
-    final Object sub = providerService.getId();
-    final String email = providerService.getEmail();
-    final String key = Optional.ofNullable(sub).map(String::valueOf).orElse(email);
-
+  private Person createPerson(final String key, final String email, final String apelido) {
     final Person user = new Person();
-    final String apelido = providerService.getNome();
     user.setName(apelido);
     user.setFullName(apelido);
     user.setAdministrator(this.administrators.contains(email));
     Person personCreated = this.personService.save(user);
-
     final IsAuthenticatedBy isAuthenticatedBy = new IsAuthenticatedBy();
     isAuthenticatedBy.setPerson(personCreated);
     isAuthenticatedBy.setKey(key);
     isAuthenticatedBy.setEmail(email);
     isAuthenticatedBy.setName(this.isAuthenticatedByService.defaultAuthServerName());
     isAuthenticatedBy.setAuthService(this.isAuthenticatedByService.findDefaultAuthenticationServer());
-
     IsAuthenticatedBy isAuthenticatedByCreated = this.isAuthenticatedByService.save(isAuthenticatedBy);
     personCreated.getAuthentications().add(isAuthenticatedByCreated);
     return personCreated;

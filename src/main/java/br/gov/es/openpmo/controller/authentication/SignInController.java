@@ -3,20 +3,25 @@ package br.gov.es.openpmo.controller.authentication;
 import br.gov.es.openpmo.dto.AcessoDto;
 import br.gov.es.openpmo.service.authentication.AuthenticationService;
 import br.gov.es.openpmo.service.authentication.CookieService;
+import br.gov.es.openpmo.service.authentication.PortalTokenValidator;
 import br.gov.es.openpmo.utils.ApplicationMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.Api;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Map;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,16 +35,41 @@ public class SignInController {
   private static final String FRONT_CALLBACK_URL = "front_callback_url";
   private final CookieService cookieService;
   private final AuthenticationService authenticationService;
+  private final PortalTokenValidator portalTokenValidator;
   
   private final AuthorizationRequestRepository<OAuth2AuthorizationRequest> repository =
     new HttpSessionOAuth2AuthorizationRequestRepository();
 
   public SignInController(
     final CookieService cookieService,
-    final AuthenticationService authenticationService
+    final AuthenticationService authenticationService,
+    final PortalTokenValidator portalTokenValidator
   ) {
     this.cookieService = cookieService;
     this.authenticationService = authenticationService;
+    this.portalTokenValidator = portalTokenValidator;
+  }
+
+  /**
+   * Login vindo do portal SIPGR (handoff): recebe o access token do Keycloak que o front trocou no
+   * backend do portal e devolve o AcessoDto do OpenPMO. 401 com {"error": "invalid.token"} para token
+   * inválido e {"error": "error.unauthorized"} para pessoa sem cadastro.
+   */
+  @PostMapping("/portal-token")
+  public ResponseEntity<?> portalToken(@RequestBody final Map<String, String> body) {
+    final String accessToken = body == null ? null : body.get("accessToken");
+    return this.portalTokenValidator.validate(accessToken)
+      .<ResponseEntity<?>>map(jwt -> {
+        final AcessoDto acesso = this.authenticationService.authenticatePortalToken(jwt);
+        return acesso == null
+          ? unauthorized(ApplicationMessage.ERROR_UNAUTHORIZED)
+          : ResponseEntity.ok(acesso);
+      })
+      .orElseGet(() -> unauthorized(ApplicationMessage.INVALID_TOKEN));
+  }
+
+  private static ResponseEntity<?> unauthorized(final String error) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Collections.singletonMap("error", error));
   }
 
   @GetMapping("/acesso-cidadao-response")
