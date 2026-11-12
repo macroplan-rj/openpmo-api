@@ -1,0 +1,339 @@
+{
+  "realm": "openpmo",
+  "enabled": true,
+  "displayName": "OpenPMO (local)",
+  "sslRequired": "none",
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 28800,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "openpmo",
+      "name": "OpenPMO local",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "openpmo-local-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4300/*",
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost:4300/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "00000000-0000-4000-8000-000000000000",
+      "username": "admin",
+      "email": "admin@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Administrador",
+      "lastName": "OpenPMO",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "username": "pessoa02",
+      "email": "pessoa02@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 02",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "username": "pessoa03",
+      "email": "pessoa03@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 03",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "username": "pessoa04",
+      "email": "pessoa04@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 04",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "username": "pessoa05",
+      "email": "pessoa05@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 05",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "username": "pessoa06",
+      "email": "pessoa06@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 06",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "username": "pessoa07",
+      "email": "pessoa07@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 07",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "username": "pessoa08",
+      "email": "pessoa08@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 08",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "username": "pessoa09",
+      "email": "pessoa09@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 09",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "username": "pessoa10",
+      "email": "pessoa10@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 10",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "username": "pessoa11",
+      "email": "pessoa11@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 11",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "username": "pessoa12",
+      "email": "pessoa12@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 12",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000013",
+      "username": "pessoa13",
+      "email": "pessoa13@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 13",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000014",
+      "username": "pessoa14",
+      "email": "pessoa14@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 14",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000015",
+      "username": "pessoa15",
+      "email": "pessoa15@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 15",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000017",
+      "username": "pessoa17",
+      "email": "pessoa17@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 17",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000018",
+      "username": "pessoa18",
+      "email": "pessoa18@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 18",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000019",
+      "username": "pessoa19",
+      "email": "pessoa19@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 19",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000020",
+      "username": "pessoa20",
+      "email": "pessoa20@openpmo.dev",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Pessoa 20",
+      "lastName": "Teste",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "openpmo",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+# Ambiente local do OpenPMO para desenvolvimento.
+#
+#   Pré-requisito: openpmo-web clonado ao lado deste repositório (../openpmo-web).
+#   docker compose up -d --build
+#
+#   Web:      http://localhost:4200   (login: admin@openpmo.dev / openpmo)
+#   API:      http://localhost:8080/openpmo
+#   Neo4j:    http://localhost:7474   (neo4j / openpmo)
+#   Keycloak: http://localhost:8180   (admin / admin)
+#
+# Detalhes, usuários de teste e como recriar os dados: docker/README.md
+
+name: openpmo
+
+services:
+  # Carrega o seed (dados fictícios) no volume do Neo4j só na primeira subida.
+  neo4j-seed:
+    image: neo4j:4.4.19
+    command: ["bash", "/seed/carregar-seed.sh"]
+    volumes:
+      - neo4j_data:/data
+      - ./docker/neo4j/seed.dump:/seed/seed.dump:ro
+      - ./docker/neo4j/carregar-seed.sh:/seed/carregar-seed.sh:ro
+    restart: "no"
+
+  neo4j:
+    image: neo4j:4.4.19
+    depends_on:
+      neo4j-seed:
+        condition: service_completed_successfully
+    environment:
+      NEO4J_AUTH: neo4j/openpmo
+      NEO4JLABS_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_memory_heap_max__size: 512M
+      NEO4J_dbms_memory_pagecache_size: 256M
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p openpmo 'RETURN 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: -Xms64m -Xmx384m
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./docker/keycloak/realm-openpmo.json:/opt/keycloak/data/import/realm-openpmo.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      JAVA_OPTS: -Xms128m -Xmx640m
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/application-local.properties
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/api/application-local.properties:/config/application-local.properties:ro
+      - ./docker/api/uo-local.json:/etc/openpmo/uo/unidades-orcamentarias.json:ro
+      - api_files:/tmp/open-pmo
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/openpmo/configuration || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 40s
+
+  web:
+    build:
+      context: ../openpmo-web
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "4200:80"
+    volumes:
+      - ./docker/web/nginx.conf:/etc/nginx/conf.d/nginx.conf:ro
+      - ./docker/web/app-config.json:/usr/share/nginx/html/assets/config/app-config.json:ro
+
+  # Modo desenvolvimento do front (hot reload): docker compose --profile dev up -d web-dev
+  # Usa o código de ../openpmo-web direto (sem build de imagem) e recarrega a cada alteração.
+  web-dev:
+    profiles: ["dev"]
+    image: node:14-bullseye
+    working_dir: /app
+    environment:
+      NODE_OPTIONS: --max-old-space-size=1536
+    # npm 8: o npm 6 que vem no node:14 falha ao instalar as dependências deste projeto (fsevents).
+    command:
+      - sh
+      - -c
+      - >-
+        [ -x node_modules/.bin/ng ] || (npm i -g npm@8 && npm ci --legacy-peer-deps --no-audit --no-fund);
+        exec node_modules/.bin/ng serve --host 0.0.0.0 --port 4300 --disable-host-check
+        --proxy-config /config/proxy.conf.json --poll 2000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "4300:4300"
+    volumes:
+      - ../openpmo-web:/app
+      - web_node_modules:/app/node_modules
+      - ./docker/web/proxy.conf.json:/config/proxy.conf.json:ro
+      - ./docker/web/app-config-dev.json:/app/src/assets/config/app-config.json:ro
+
+volumes:
+  neo4j_data:
+  api_files:
+  web_node_modules:
