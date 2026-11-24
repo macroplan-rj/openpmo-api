@@ -14,9 +14,16 @@ Swagger (lista de rotas e parâmetros): `https://<host-do-openpmo>/openpmo/docum
   X-Api-Key: <token>
   ```
 
-- O token é só de leitura e vale apenas para `/painel/*`. Ele é fornecido pela equipe do OpenPMO, um por ambiente.
-- Sem token ou com token inválido: `401` com `{ "erro": "invalid.token" }`.
+- O token é só de leitura e vale apenas para `/painel/*`.
+- **Quem gera:** um administrador do OpenPMO, no menu de administração, em **Tokens da API**. Cada sistema que consome
+  a API recebe o seu, com um nome que diz quem usa. O valor aparece uma única vez, na hora da geração; o OpenPMO
+  guarda só o hash e não consegue mostrá-lo de novo.
+- **Revogação:** na mesma tela. Vale na hora: a chamada seguinte com o token revogado recebe `401`. Não há como
+  reativar; gera-se outro.
+- Sem token, com token inválido ou revogado: `401` com `{ "erro": "invalid.token" }`.
 - Guarde o token no servidor do painel; ele dá acesso à carteira inteira.
+- Os tokens gerados começam com `pmo_`. O token fixo antigo (configurado no deploy em `app.painel.api-key`) continua
+  aceito enquanto a configuração estiver preenchida; esvaziá-la desliga só ele.
 
 ## 2. Regras gerais
 

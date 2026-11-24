@@ -173,6 +173,9 @@ public class ApplicationMessage {
   public static final String ALREADY_EXISTS_PERMISSION = "already.exists.permission";
   public static final String WORKPACK_HAS_LINK_WITH_THIS_OFFICE = "link.already.exists";
 
+  public static final String PAINEL_TOKEN_NAME_INVALID = "painelToken.name.invalid";
+  public static final String PAINEL_TOKEN_NOT_FOUND = "painelToken.not.found";
+
   private ApplicationMessage() {
   }
 

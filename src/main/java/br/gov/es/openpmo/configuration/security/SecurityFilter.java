@@ -8,6 +8,7 @@ import br.gov.es.openpmo.model.actors.Person;
 import br.gov.es.openpmo.model.relations.IsAuthenticatedBy;
 import br.gov.es.openpmo.service.actors.PersonService;
 import br.gov.es.openpmo.service.authentication.TokenService;
+import br.gov.es.openpmo.service.painel.PainelApiTokenService;
 import br.gov.es.openpmo.utils.ApplicationMessage;
 import io.jsonwebtoken.Claims;
 import java.io.IOException;
@@ -52,20 +53,27 @@ public class SecurityFilter extends OncePerRequestFilter {
 
   private static final String PAINEL_KEY_HEADER = "X-Api-Key";
 
-  /** Token de servico do Painel Estrategico (app.painel.api-key); vazio desliga o acesso a /painel. */
+  /**
+   * Token de servico fixo do Painel Estrategico (app.painel.api-key). Mantido para a transicao: os tokens novos
+   * sao gerados pela administracao e validados no banco (US-042). Vazio desliga so este token fixo.
+   */
   private final String painelApiKey;
+
+  private final PainelApiTokenService painelApiTokenService;
 
   @Autowired
   public SecurityFilter(
           final TokenService tokenService,
           final PersonService personService,
           @Value("${app.login.server.idsvr.name}") final String authName,
-          @Value("${app.painel.api-key:}") final String painelApiKey
+          @Value("${app.painel.api-key:}") final String painelApiKey,
+          final PainelApiTokenService painelApiTokenService
   ) {
     this.tokenService = tokenService;
     this.personService = personService;
     this.authName = authName;
     this.painelApiKey = painelApiKey;
+    this.painelApiTokenService = painelApiTokenService;
   }
 
   private static boolean isPainelUrl(final String url) {
@@ -73,7 +81,14 @@ public class SecurityFilter extends OncePerRequestFilter {
   }
 
   private boolean isValidPainelKey(final String key) {
-    if(this.painelApiKey == null || this.painelApiKey.isEmpty() || key == null) {
+    if(key == null || key.isEmpty()) {
+      return false;
+    }
+    return this.isFixedPainelKey(key) || this.painelApiTokenService.isValid(key);
+  }
+
+  private boolean isFixedPainelKey(final String key) {
+    if(this.painelApiKey == null || this.painelApiKey.isEmpty()) {
       return false;
     }
     return java.security.MessageDigest.isEqual(
